@@ -24,6 +24,6 @@ file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 
 add_executable(IFCAStandalone ${sources})
 
-set_target_properties(IFCAStandalone PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Greeter")
+set_target_properties(IFCAStandalone PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "IFCA")
 
 target_link_libraries(IFCAStandalone IFCA::IFCA cxxopts)
