@@ -57,6 +57,13 @@ cmake --build build/standalone
 ./build/standalone/Greeter --help
 ```
 
+### Install C++17 and other prerequisites
+
+```bash
+sudo apt install gcc-10 gcc-10-base gcc-10-doc g++-10 libstdc++-10-dev libstdc++-10-doc
+sudo apt install gdb gdb-doc
+```
+
 ### Build and run test suite
 
 Use the following commands from the project's root directory to run the test suite.
