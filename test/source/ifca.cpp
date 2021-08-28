@@ -1,6 +1,6 @@
 #include <doctest/doctest.h>
-#include <greeter/greeter.h>
-#include <greeter/version.h>
+#include <ifca/ifca.h>
+#include <ifca/version.h>
 
 #include <string>
 

@@ -116,7 +116,7 @@ The project also includes an `all` directory that allows building all targets at
 This is useful during development, as it exposes all subprojects to your IDE and avoids redundant builds of the library.
 
 ```bash
-cmake -S all -B build
+cmake -S all -B buildcame
 cmake --build build
 
 # run tests

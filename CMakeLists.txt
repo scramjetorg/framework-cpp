@@ -9,6 +9,8 @@ project(
   LANGUAGES CXX
 )
 
+set(CMAKE_CXX_STANDARD 17)
+
 # ---- Include guards ----
 
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
@@ -44,7 +46,7 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/
 
 # Note: for header-only libraries change all PUBLIC flags to INTERFACE and create an interface
 # target: add_library(IFCA INTERFACE)
-add_library(IFCA ${headers} ${sources})
+add_library(IFCA SHARED ${headers} ${sources})
 
 set_target_properties(IFCA PROPERTIES CXX_STANDARD 17)
 
