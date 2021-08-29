@@ -25,7 +25,6 @@ else()
 endif()
 
 # ---- Create binary ----
-
 file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 add_executable(IFCATests ${sources})
 target_link_libraries(IFCATests doctest::doctest IFCA::IFCA)

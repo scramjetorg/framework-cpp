@@ -3,19 +3,27 @@
 #include <ifca/version.h>
 
 #include <string>
+#include <iostream>
 
 TEST_CASE("Greeter") {
-  using namespace greeter;
+  using namespace ifca;
 
-  Greeter greeter("Tests");
+  auto cb = [](int a) { return std::to_string(a + 1); };
+  IFCA<int, std::string> * ifca = new IFCA<int, std::string>(8, cb);
 
-  CHECK(greeter.greet(LanguageCode::EN) == "Hello, Tests!");
-  CHECK(greeter.greet(LanguageCode::DE) == "Hallo Tests!");
-  CHECK(greeter.greet(LanguageCode::ES) == "¡Hola Tests!");
-  CHECK(greeter.greet(LanguageCode::FR) == "Bonjour Tests!");
+  ifca -> write(1);
+
+  auto out = ifca -> read().get_future().get();
+
+  if (out.has_value()) {
+    auto x = out.value_or("<empty>");
+    std::cout << x << std::endl;
+  }
+
+  delete ifca;
 }
 
 TEST_CASE("Greeter version") {
-  static_assert(std::string_view(GREETER_VERSION) == std::string_view("1.0"));
-  CHECK(std::string(GREETER_VERSION) == std::string("1.0"));
+  static_assert(std::string_view(IFCA_VERSION) == std::string_view("1.0"));
+  CHECK(std::string(IFCA_VERSION) == std::string("1.0"));
 }

@@ -11,37 +11,27 @@ namespace ifca {
       Type2T,
   };
 
-  namespace transform {
-    template<typename T, typename S>
-    using synchronous = S (*)(T);
-
-    template<typename T, typename S>
-    using async_promise = std::promise<S> (*)(T);
-
-    template<typename T, typename S>
-    using async_future = std::future<S> (*)(T);
-  }
-
-  template <typename T, typename S, typename I = void>
+  template <typename T, typename S, typename W = void, typename I = void>
   class IFCA {
-    static_assert(std::is_base_of<IFCA, I>::value, "I must inherit from IFCA");
+    static_assert(std::is_base_of<IFCA, I>::value || std::is_void<I>::value, "I must inherit from IFCA or be void");
+
+    using synchronous = std::function<S(T)>;
+    using async_future = std::function<std::future<S>(T)>;
+    using async_promise = std::function<std::promise<S>(T)>;
 
   public:
-    IFCA(int maxParallel, transform::synchronous<T,S> *op);
-    IFCA(int maxParallel, transform::async_promise<T,S> *op);
-    IFCA(int maxParallel, transform::async_future<T,S> *op);
+    IFCA(int maxParallel, synchronous op);
+    IFCA(int maxParallel, std::function<async_promise> op);
+    IFCA(int maxParallel, std::function<async_future> op);
 
     std::optional<std::promise<void>> write(T chunk);
     std::optional<std::promise<void>> end();
 
     std::promise<std::optional<S>> read();
 
-    template<typename W>
-    IFCA<T,W,IFCA<T,S,I>> addTransform(transform::synchronous<S,W> *op);
-    template<typename W>
-    IFCA<T,W,IFCA<T,S,I>> addTransform(transform::async_promise<S,W> *op);
-    template<typename W>
-    IFCA<T,W,IFCA<T,S,I>> addTransform(transform::async_future<S,W> *op);
+    IFCA<T,W,IFCA<T,S,I>> addTransform(std::function<auto (S) -> W> op);
+    IFCA<T,W,IFCA<T,S,I>> addTransform(std::function<auto (std::promise<S>) -> T> op);
+    IFCA<T,W,IFCA<T,S,I>> addTransform(std::function<auto (std::future<S>) -> T> op);
 
     I removeTransform();
   };

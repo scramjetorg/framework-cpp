@@ -49,12 +49,11 @@ During development it is usually convenient to [build all subprojects at once](#
 
 ### Build and run the standalone target
 
-Use the following command to build and run the executable target.
+Use the following command to build the library.
 
 ```bash
-cmake -S standalone -B build/standalone
-cmake --build build/standalone
-./build/standalone/Greeter --help
+cmake -B build/
+cmake --clean-first --build build
 ```
 
 ### Install C++17 and other prerequisites
@@ -116,15 +115,13 @@ The project also includes an `all` directory that allows building all targets at
 This is useful during development, as it exposes all subprojects to your IDE and avoids redundant builds of the library.
 
 ```bash
-cmake -S all -B buildcame
+cmake -S all -B build
 cmake --build build
 
 # run tests
-./build/test/GreeterTests
+./build/test/IFCATests
 # format code
 cmake --build build --target fix-format
-# run standalone
-./build/standalone/Greeter --help
 # build docs
 cmake --build build --target GenerateDocs
 ```
