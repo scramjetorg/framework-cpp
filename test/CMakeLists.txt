@@ -30,6 +30,12 @@ add_executable(IFCATests ${sources})
 target_link_libraries(IFCATests doctest::doctest IFCA::IFCA)
 set_target_properties(IFCATests PROPERTIES CXX_STANDARD 17)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CFLAGS} -g")
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(IFCA PRIVATE Threads::Threads)
+
 # enable compiler warnings
 if(NOT TEST_INSTALLED_VERSION)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -51,6 +57,9 @@ include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 doctest_discover_tests(IFCATests)
 
 # ---- code coverage ----
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(IFCA PRIVATE Threads::Threads)
 
 if(ENABLE_TEST_COVERAGE)
   target_compile_options(IFCA PUBLIC -O0 -g -fprofile-arcs -ftest-coverage)
