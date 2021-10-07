@@ -21,7 +21,6 @@ class TransformBase {
                    std::mutex& processing_promises_mutex,
                    const std::future<void>& previous_ready,
                    std::string&& chunk) = 0;
-                   
   void SetNextTransform(std::unique_ptr<TransformBase> nextTransform);
   TransformBase* GetNextTransform() { return nextTransform_.get(); };
 
