@@ -12,8 +12,7 @@ class Transform : public TransformBase {
   Transform() = default;
   explicit Transform(std::function<std::string(std::string)>& func);
 
-  virtual void Run(std::list<chunk_promise>& processing_promises_,
-                   std::mutex& processing_promises_mutex,
+  virtual void Run(ThreadList<chunk_promise>& processing_promises_,
                    const std::future<void>& previous_ready,
                    std::string&& chunk);
 

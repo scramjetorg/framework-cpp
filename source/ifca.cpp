@@ -18,7 +18,8 @@ Ifca::Ifca(unsigned int max_parallel)
       ended_(false) {
   std::promise<void> first_processing_promise;
   first_processing_promise.set_value();
-  processing_futures_.emplace_back(first_processing_promise.get_future());
+  processing_futures_.emplace_back(
+      std::move(first_processing_promise.get_future()));
   processing_futures_current = processing_futures_.begin();
   SetClearDrain();
 }
@@ -29,39 +30,30 @@ drain_sfuture Ifca::Write(chunk_intype chunk) {
   if (ended_) throw WriteAfterEnd();
 
   if (read_ahead_promises_.empty()) {
-    processing_promises_mutex.lock();
     auto& promise = processing_promises_.emplace_back(chunk_promise());
-    processing_promises_mutex.unlock();
     read_futures_.emplace_back(promise.get_future());
   } else {
     auto read_ahead_promise = std::move(read_ahead_promises_.front());
-    processing_promises_mutex.lock();
+    read_ahead_promises_.pop_front();
     processing_promises_.push_back(std::move(read_ahead_promise));
-    processing_promises_mutex.unlock();
-    read_ahead_promises_.pop_front();  // TODO: make sure no sigsegv created
   }
 
   if (!transform_) {
-    processing_promises_mutex.lock();
-    auto result_promise = std::move(processing_promises_.front());
-    processing_promises_.pop_front();
-    processing_promises_mutex.unlock();
+    auto result_promise = processing_promises_.take_front();
     result_promise.set_value(chunk);
   } else {
     auto previous_processing_future = processing_futures_current;
-    auto f = std::async(
+    auto async_future = std::async(
         std::launch::async,
         [this, previous_processing_future](chunk_intype&& chunk) {
-          transform_->Run(processing_promises_, processing_promises_mutex,
-                          (*previous_processing_future), std::move(chunk));
-          auto lock = std::lock_guard(processing_futures_mutex);
+          transform_->Run(processing_promises_, (*previous_processing_future),
+                          std::move(chunk));
           processing_futures_.erase(previous_processing_future);
         },
         async_forwarder<chunk_intype>(chunk));
 
-    auto lock = std::lock_guard(processing_futures_mutex);
-    processing_futures_current =
-        processing_futures_.emplace(processing_futures_.end(), std::move(f));
+    processing_futures_current = processing_futures_.emplace(
+        processing_futures_.end(), std::move(async_future));
   }
 
   if (IsDrainLvl() && !drain_promise_) {

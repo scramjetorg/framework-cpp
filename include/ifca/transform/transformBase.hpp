@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "../types.hpp"
+#include "helpers/threadList.hpp"
 
 namespace ifca {
 
@@ -17,8 +18,7 @@ class TransformBase {
   TransformBase& operator=(TransformBase&& other) = default;
   virtual ~TransformBase() = default;
 
-  virtual void Run(std::list<chunk_promise>& processing_promises_,
-                   std::mutex& processing_promises_mutex,
+  virtual void Run(ThreadList<chunk_promise>& processing_promises_,
                    const std::future<void>& previous_ready,
                    std::string&& chunk) = 0;
   void SetNextTransform(std::unique_ptr<TransformBase> nextTransform);

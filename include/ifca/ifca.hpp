@@ -5,6 +5,7 @@
 #include <list>
 #include <mutex>
 
+#include "helpers/threadList.hpp"
 #include "ifca/transform/transformBase.hpp"
 #include "types.hpp"
 
@@ -41,15 +42,11 @@ class Ifca {
   drain_promise drain_promise_;
   drain_sfuture drain_sfuture_;
 
-  std::mutex processing_futures_mutex;
-  std::list<std::future<void>> processing_futures_;
-  decltype(processing_futures_)::iterator processing_futures_current;
+  ThreadList<chunk_promise> processing_promises_;
+  ThreadList<std::future<void>> processing_futures_;
+  decltype(processing_futures_)::const_iterator processing_futures_current;
 
   std::list<chunk_promise> read_ahead_promises_;
-
-  std::mutex processing_promises_mutex;
-  std::list<chunk_promise> processing_promises_;
-
   std::list<chunk_future> read_futures_;
 
   bool ended_;
