@@ -10,11 +10,10 @@ namespace ifca {
 class Transform : public TransformBase {
  public:
   Transform() = default;
-  explicit Transform(std::function<std::string(std::string)>& func);
+  explicit Transform(std::function<std::string(std::string)> func);
 
   virtual void Run(ThreadList<chunk_promise>& processing_promises_,
-                   const std::future<void>& previous_ready,
-                   std::string&& chunk);
+                   std::future<void>&& previous_ready, std::string&& chunk);
 
  private:
   std::function<std::string(std::string)> func_;

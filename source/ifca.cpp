@@ -12,16 +12,10 @@
 namespace ifca {
 
 Ifca::Ifca(unsigned int max_parallel)
-    : max_parallel_(max_parallel),
-      drain_promise_(new std::promise<void>()),
-      drain_sfuture_(drain_promise_->get_future()),
-      ended_(false) {
+    : drain_state_(max_parallel), ended_(false) {
   std::promise<void> first_processing_promise;
   first_processing_promise.set_value();
-  processing_futures_.emplace_back(
-      std::move(first_processing_promise.get_future()));
-  processing_futures_current = processing_futures_.begin();
-  SetClearDrain();
+  processing_future_ = first_processing_promise.get_future();
 }
 
 Ifca::~Ifca() {}
@@ -38,31 +32,34 @@ drain_sfuture Ifca::Write(chunk_intype chunk) {
     processing_promises_.push_back(std::move(read_ahead_promise));
   }
 
-  if (!transform_) {
+  if (transforms_.empty()) {
     auto result_promise = processing_promises_.take_front();
     result_promise.set_value(chunk);
+    drain_state_.ChunkReadReady();
   } else {
-    auto previous_processing_future = processing_futures_current;
+    drain_state_.ChunkStartedProcessing();
     auto async_future = std::async(
         std::launch::async,
-        [this, previous_processing_future](chunk_intype&& chunk) {
-          transform_->Run(processing_promises_, (*previous_processing_future),
-                          std::move(chunk));
-          processing_futures_.erase(previous_processing_future);
+        [this](chunk_intype&& chunk,
+               std::future<void>&& previous_processing_future) {
+          for (auto&& transform : transforms_) {
+            chunk = transform(chunk);
+          }
+
+          previous_processing_future.wait();
+          auto result_promise = processing_promises_.take_front();
+          drain_state_.ChunkFinishedProcessing();
+          result_promise.set_value(chunk);
         },
-        async_forwarder<chunk_intype>(chunk));
-
-    processing_futures_current = processing_futures_.emplace(
-        processing_futures_.end(), std::move(async_future));
+        async_forwarder<chunk_intype>(chunk), std::move(processing_future_));
+    processing_future_ = std::move(async_future);
   }
 
-  if (IsDrainLvl() && !drain_promise_) {
-    CreateDrain();
-  }
-  return drain_sfuture_;
+  return drain_state_;
 }
 
 chunk_future Ifca::Read() {
+  drain_state_.ChunkRead();
   if (read_futures_.empty()) {
     auto& read_ahead_promise =
         read_ahead_promises_.emplace_back(chunk_promise());
@@ -71,9 +68,6 @@ chunk_future Ifca::Read() {
   auto read = std::move(read_futures_.front());
   read_futures_.pop_front();
 
-  if (drain_promise_ && !IsDrainLvl()) {
-    SetClearDrain();
-  }
   return read;
 }
 
@@ -89,23 +83,9 @@ void Ifca::End() {
   }
 }
 
-void Ifca::addTransform(std::unique_ptr<TransformBase> transform) {
-  transform_ = std::move(transform);
-}
-
-bool Ifca::IsDrainLvl() {
-  // -1 because of first_processing_promise placed in constructor
-  return processing_futures_.size() - 1 + read_futures_.size() > max_parallel_;
-}
-
-void Ifca::CreateDrain() {
-  drain_promise_ = drain_promise(new std::promise<void>());
-  drain_sfuture_ = drain_sfuture(drain_promise_->get_future());
-}
-
-void Ifca::SetClearDrain() {
-  drain_promise_->set_value();
-  drain_promise_.release();
+void Ifca::addTransform(
+    std::function<chunk_outtype(chunk_intype)>&& transform) {
+  transforms_.push_back(std::move(transform));
 }
 
 }  // namespace ifca

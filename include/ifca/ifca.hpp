@@ -1,11 +1,15 @@
 #ifndef IFCA_H
 #define IFCA_H
 
+#include <atomic>
+#include <functional>
 #include <future>
 #include <list>
 #include <mutex>
+#include <vector>
 
 #include "helpers/threadList.hpp"
+#include "ifca/drain.hpp"
 #include "ifca/transform/transformBase.hpp"
 #include "types.hpp"
 
@@ -29,29 +33,21 @@ class Ifca {
   chunk_future Read();
   void End();
 
-  void addTransform(std::unique_ptr<TransformBase> transform);
-
- protected:
-  bool IsDrainLvl();
-  void CreateDrain();
-  void SetClearDrain();
+  void addTransform(std::function<chunk_outtype(chunk_intype)>&& transform);
 
  private:
-  unsigned int max_parallel_;
-
-  drain_promise drain_promise_;
-  drain_sfuture drain_sfuture_;
+  DrainState drain_state_;
 
   ThreadList<chunk_promise> processing_promises_;
-  ThreadList<std::future<void>> processing_futures_;
-  decltype(processing_futures_)::const_iterator processing_futures_current;
+
+  std::future<void> processing_future_;
 
   std::list<chunk_promise> read_ahead_promises_;
   std::list<chunk_future> read_futures_;
 
   bool ended_;
 
-  std::unique_ptr<TransformBase> transform_;  // TODO: create class
+  std::vector<std::function<chunk_outtype(chunk_intype)>> transforms_;
 };
 
 }  // namespace ifca

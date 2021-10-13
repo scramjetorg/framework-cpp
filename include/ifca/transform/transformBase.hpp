@@ -19,8 +19,7 @@ class TransformBase {
   virtual ~TransformBase() = default;
 
   virtual void Run(ThreadList<chunk_promise>& processing_promises_,
-                   const std::future<void>& previous_ready,
-                   std::string&& chunk) = 0;
+                   std::future<void>&& previous_ready, std::string&& chunk) = 0;
   void SetNextTransform(std::unique_ptr<TransformBase> nextTransform);
   TransformBase* GetNextTransform() { return nextTransform_.get(); };
 
