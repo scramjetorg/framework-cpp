@@ -24,6 +24,15 @@ class ReadEnd : public std::exception {
   ReadEnd() noexcept {};
   virtual ~ReadEnd() = default;
   virtual const char* what() const noexcept override {
-    return "End() called before Write()";
+    return "Reading from empty ended Ifca";
+  };
+};
+
+class UncallableFunction : public std::exception {
+ public:
+  UncallableFunction() noexcept {};
+  virtual ~UncallableFunction() = default;
+  virtual const char* what() const noexcept override {
+    return "Transform function must be callable";
   };
 };

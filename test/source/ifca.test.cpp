@@ -12,7 +12,6 @@
 #include "helpers/futureIsReady.hpp"
 #include "ifca/exceptions.hpp"
 #include "ifca/ifca.hpp"
-#include "ifca/transform/transform.hpp"
 #include "ifca/types.hpp"
 
 namespace ifca {
@@ -22,9 +21,10 @@ const std::array<int, 6> kTestSequenceInt = {1, 2, 1, 3, 2, 4};
 // TODO: remove after handling all types
 decltype(kTestSequenceInt)::const_iterator it_kTestSequenceInt;
 
-std::array<std::string, 6> kTestSequenceString = {
-    "napis 1", "napis 2", "napis 3", "napis 4", "napis 5", "napis 6"};
-std::array<std::string, 6> kResultSequenceString = {
+std::vector<chunk_intype> kTestSequenceString{"napis 1", "napis 2", "napis 3",
+                                              "napis 4", "napis 5", "napis 6"};
+
+const std::vector<chunk_outtype> kTransformResult{
     "napis 10", "napis 20", "napis 30", "napis 40", "napis 50", "napis 60"};
 
 const unsigned int kMaxParallel = 4;
@@ -43,222 +43,241 @@ std::function<chunk_outtype(chunk_intype)> test_delay_function =
       return chunk;
     };
 
-std::function<bool(const chunk_intype &, const chunk_sfuture &)>
-    sync_comparator =
-        [](const chunk_intype &input, const chunk_sfuture &result) {
-          if (!future_is_ready(result)) return false;
-          return input == result.get();
-        };
+bool in_out_comparator(chunk_intype &val1, chunk_outtype &val2) {
+  if (val1.compare(val2) == 0) return true;
+  return false;
+}
 
-const std::array<std::string, 6> kTransformResult = {
-    "napis 10", "napis 20", "napis 30", "napis 40", "napis 50", "napis 60"};
+bool in_sfuture_comparator(const chunk_intype &input,
+                           const chunk_sfuture &result) {
+  if (!future_is_ready(result)) return false;
+  return input == result.get();
+}
 
-// TEST_CASE("write then read concurrently") {
-//   auto ifca = Ifca(kMaxParallel);
-//   auto t1 = std::unique_ptr<TransformBase>(new
-//   Transform(test_string_function)); auto t2 =
-//   std::unique_ptr<TransformBase>(new Transform(test_delay_function));
-//   t1->SetNextTransform(std::move(t2));
-//   ifca.addTransform(std::move(t1));
+bool isEqual(std::vector<chunk_intype> input,
+             std::vector<chunk_outtype> output) {
+  return std::equal(input.begin(), input.end(), output.begin(),
+                    in_out_comparator);
+}
+bool isEqual(std::vector<chunk_intype> input,
+             std::vector<chunk_sfuture> output) {
+  return std::equal(input.begin(), input.end(), output.begin(),
+                    in_sfuture_comparator);
+}
 
-//   std::vector<chunk_sfuture> results_future;
-//   std::vector<std::future<void>> processingTasks;
-//   std::vector<chunk_outtype> results;
-//   std::mutex results_mutex;
-
-//   auto &&input_size = kTestSequenceString.size();
-//   for (auto &&s : kTestSequenceString) {
-//     ifca.Write(s);
-//     results_future.push_back(std::move(ifca.Read()));
-//   }
-//   REQUIRE(results_future.size() == input_size);
-
-//   // FIXME: libpthread not attached by cmake for tests
-//   // for (auto &&result_future : results_future) {
-//   //   auto a = std::async(std::launch::async,
-//   //                       [&results_mutex, &results, &result_future] {
-//   //                         std::cout << "wchodzi async";
-
-//   //                         result_future.wait();
-//   //                         std::lock_guard<std::mutex> m(results_mutex);
-//   //                         auto &res = result_future.get();
-//   //                         results.push_back(std::move(res));
-//   //                       });
-//   //   processingTasks.push_back(std::move(a));
-//   // }
-//   for (auto &&processing : processingTasks) {
-//     processing.wait();
-//   }
-
-//   auto equal = std::equal(
-//       kTestSequenceString.begin(), kTestSequenceString.end(),
-//       results.begin(), results.end(), [](chunk_intype &val1, chunk_outtype
-//       &val2) -> bool {
-//         if (val1.compare(val2) == 0) return true;
-//         return false;
-//       });
-//   REQUIRE(equal == true);
-// }
+void await_results_concurently(std::vector<chunk_sfuture> &input,
+                               std::vector<chunk_outtype> &results) {
+  std::mutex results_mutex;
+  std::vector<std::future<void>> results_futures;
+  for (auto &&in : input) {
+    auto future = std::async(
+        std::launch::async,
+        [&results, &results_mutex](chunk_sfuture &&in) {
+          in.wait();
+          std::lock_guard<std::mutex> l(results_mutex);
+          results.push_back(in.get());
+        },
+        std::move(in));
+    results_futures.push_back(std::move(future));
+  }
+  for (auto &&result_futures : results_futures) {
+    result_futures.wait();
+  }
+}
 
 // Basic tests
 // -----------
 
 TEST_CASE("Passthrough by default") {
   auto ifca = Ifca(kMaxParallel);
+  std::vector<std::string> results;
 
   for (auto &&s : kTestSequenceString) {
     ifca.Write(s);
   }
-  std::vector<std::string> results;
   for (size_t i = 0; i < kTestSequenceString.size(); i++) {
     results.push_back(std::move(ifca.Read().get()));
   }
-  for (size_t i = 0; i < results.size(); i++) {
-    // should this be CHECK?
-    REQUIRE(results[i] == kTestSequenceString[i]);
-  }
+  CHECK(isEqual(kTestSequenceString, results));
 }
 
 TEST_CASE("Simple transformation") {
   auto ifca = Ifca(kMaxParallel);
-  ifca.addTransform(std::move(test_string_function));
+  ifca.addTransform(test_string_function);
+  std::vector<std::string> results;
 
   for (auto &&s : kTestSequenceString) {
     ifca.Write(s);
   }
-  std::vector<std::string> results;
   for (size_t i = 0; i < kTestSequenceString.size(); i++) {
     results.push_back(std::move(ifca.Read().get()));
   }
-  for (size_t i = 0; i < results.size(); i++) {
-    // should this be CHECK?
-    REQUIRE(results[i] == kTransformResult[i]);
+  CHECK(isEqual(results, kTransformResult));
+}
+
+TEST_CASE("Concurrent processing") {
+  // TODO: add after generic transforms
+  auto ifca = Ifca(kMaxParallel);
+  it_kTestSequenceInt = kTestSequenceInt.begin();
+  ifca.addTransform(test_delay_function);
+
+  std::vector<chunk_sfuture> reads;
+  for (auto &&s : kTestSequenceString) {
+    ifca.Write(s);
   }
+  for (size_t i = 0; i < kTestSequenceString.size(); i++) {
+    reads.push_back(std::move(ifca.Read()));
+  }
+  std::vector<std::string> results;
+  auto t1 = std::chrono::high_resolution_clock::now();
+  await_results_concurently(reads, results);
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> time_span =
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+  auto max_delay_el =
+      std::max_element(kTestSequenceInt.begin(), kTestSequenceInt.end());
+  auto max_delay = *max_delay_el * 0.2;
+  CHECK_LE(time_span.count(), max_delay);
+  CHECK(isEqual(results, kTestSequenceString));
 }
 
 // Ordering tests
 // --------------
 
+TEST_CASE("Result order with odd chunks delayed") {
+  // TODO: add after generic transforms
+}
+
 TEST_CASE("Result order with varying processing time") {
   auto ifca = Ifca(kMaxParallel);
   it_kTestSequenceInt = kTestSequenceInt.begin();
-  ifca.addTransform(std::move(test_delay_function));
+  ifca.addTransform(test_delay_function);
+  std::vector<std::string> results;
 
   for (auto &&s : kTestSequenceString) {
     ifca.Write(s);
   }
-  std::vector<std::string> results;
   for (size_t i = 0; i < kTestSequenceString.size(); i++) {
     results.push_back(std::move(ifca.Read().get()));
   }
-  REQUIRE(results.size() == kTestSequenceString.size());
-  for (size_t i = 0; i < results.size(); i++) {
-    // should this be CHECK?
-    REQUIRE(results[i] == kTestSequenceString[i]);
-  }
+
+  CHECK(isEqual(results, kTestSequenceString));
 }
 
 TEST_CASE("Write and read in turn") {
   auto ifca = Ifca(kMaxParallel);
   it_kTestSequenceInt = kTestSequenceInt.begin();
-  ifca.addTransform(std::move(test_delay_function));
+  ifca.addTransform(test_delay_function);
 
   std::vector<chunk_sfuture> reads;
   for (auto &&s : kTestSequenceString) {
     ifca.Write(s);
     reads.push_back(std::move(ifca.Read()));
   }
-
   std::vector<std::string> results;
-  for (auto &&read : reads) {
-    auto ready =
-        read.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
-    CHECK(ready == true);
-    if (ready) results.push_back(std::move(read.get()));
+  await_results_concurently(reads, results);
+  CHECK(isEqual(results, kTestSequenceString));
+}
+
+TEST_CASE("Multiple concurrent reads") {
+  auto ifca = Ifca(kMaxParallel);
+  it_kTestSequenceInt = kTestSequenceInt.begin();
+  ifca.addTransform(test_delay_function);
+
+  std::vector<chunk_sfuture> reads;
+  for (auto &&s : kTestSequenceString) {
+    ifca.Write(s);
   }
-  REQUIRE(results.size() == kTestSequenceString.size());
-  for (size_t i = 0; i < results.size(); i++) {
-    // should this be CHECK?
-    REQUIRE(results[i] == kTestSequenceString[i]);
+  for (size_t i = 0; i < kTestSequenceString.size(); i++) {
+    reads.push_back(std::move(ifca.Read()));
   }
+  std::vector<std::string> results;
+  await_results_concurently(reads, results);
+  CHECK(isEqual(results, kTestSequenceString));
 }
 
 TEST_CASE("Reads before write") {
   auto ifca = Ifca(kMaxParallel);
   it_kTestSequenceInt = kTestSequenceInt.begin();
-  ifca.addTransform(std::move(test_delay_function));
+  ifca.addTransform(test_delay_function);
   auto &&input_size = kTestSequenceString.size();
 
   std::vector<chunk_sfuture> reads;
   for (size_t i = 0; i < input_size; i++) {
     INFO("index: " << i);
-    // should this use ifca.Read().share() ? Why?
     reads.push_back(std::move(ifca.Read()));
   }
   for (size_t i = 0; i < input_size; i++) {
     INFO("index: " << i);
-    REQUIRE(reads[i].valid() == true);
-    CHECK(future_is_ready(reads[i]) == false);
+    REQUIRE(reads[i].valid());
+    CHECK_FALSE(future_is_ready(reads[i]));
   }
 
   for (auto &&s : kTestSequenceString) {
     ifca.Write(s);
   }
-
-  std::vector<std::string> results;
+  std::vector<chunk_outtype> results;
   for (auto &&read : reads) {
     results.push_back(std::move(read.get()));
   }
-  REQUIRE(results.size() == kTestSequenceString.size());
-  for (size_t i = 0; i < results.size(); i++) {
-    // should this be CHECK?
-    REQUIRE(results[i] == kTestSequenceString[i]);
-  }
+  CHECK(isEqual(results, kTestSequenceString));
 }
 
 // Filtering tests
 // ---------------
 
+TEST_CASE("Support for dropping chunks") {
+  // TODO: Add after finished transforms
+}
+TEST_CASE("Reads before filtering") {
+  // TODO: Add after finished transforms
+}
+TEST_CASE("Dropping chunks in the middle of chain") {
+  // TODO: Add after finished transforms
+}
+TEST_CASE("Garbage collection of dropped chunks") {
+  // TODO: Add after finished transforms
+}
+
 // Limits tests
 // ------------
 
-TEST_CASE("Writing below limit - no transformation") {
+TEST_CASE("Unrestricted writing below limit - without transformation") {
   auto ifca = Ifca(kMaxParallel);
   std::vector<drain_sfuture> drains;
-  REQUIRE(kTestSequenceString.size() > kMaxParallel - 1);
+  REQUIRE_GE(kTestSequenceString.size(), kMaxParallel - 1);
   for (size_t i = 0; i < kMaxParallel - 1; i++) {
     auto &s = kTestSequenceString[i];
     drains.push_back(std::move(ifca.Write(s)));
   }
 
   for (auto &&drain : drains) {
-    CHECK(future_is_ready(drain) == true);
+    CHECK(future_is_ready(drain));
   }
 }
 
-TEST_CASE("Unrestricted writing below limit (async)") {
+TEST_CASE("Unrestricted writing below limit") {
   auto ifca = Ifca(kMaxParallel);
   it_kTestSequenceInt = kTestSequenceInt.begin();
-  ifca.addTransform(std::move(test_delay_function));
+  ifca.addTransform(test_delay_function);
   size_t write_count = kMaxParallel - 1;
+  REQUIRE_GE(kTestSequenceString.size(), write_count);
 
   std::vector<drain_sfuture> drains;
   for (size_t i = 0; i < write_count; i++) {
     auto &s = kTestSequenceString[i];
     drains.push_back(std::move(ifca.Write(s)));
   }
-  for (size_t i = 0; i < write_count; i++) {
-    INFO("index: " << i);
-    auto &drain = drains[i];
-    CHECK(future_is_ready(drain) == true);
+  for (auto &&drain : drains) {
+    CHECK(future_is_ready(drain));
   }
 }
 
 TEST_CASE("Drain pending when limit reached") {
   auto ifca = Ifca(kMaxParallel);
   it_kTestSequenceInt = kTestSequenceInt.begin();
-  ifca.addTransform(std::move(test_delay_function));
-  REQUIRE(kTestSequenceString.size() > kMaxParallel);
+  ifca.addTransform(test_delay_function);
+  REQUIRE_GE(kTestSequenceString.size(), kMaxParallel);
 
   std::vector<drain_sfuture> drains;
   for (auto &s : kTestSequenceString) {
@@ -268,9 +287,9 @@ TEST_CASE("Drain pending when limit reached") {
     auto &drain = drains[i];
     INFO("index: " << i);
     if (i < kMaxParallel - 1)
-      CHECK(future_is_ready(drain) == true);
+      CHECK(future_is_ready(drain));
     else {
-      CHECK(future_is_ready(drain) == false);
+      CHECK_FALSE(future_is_ready(drain));
     }
   }
 }
@@ -278,22 +297,13 @@ TEST_CASE("Drain pending when limit reached") {
 TEST_CASE("Drain resolved when drops below limit") {
   auto ifca = Ifca(kMaxParallel);
   it_kTestSequenceInt = kTestSequenceInt.begin();
-  ifca.addTransform(std::move(test_delay_function));
+  ifca.addTransform(test_delay_function);
   const auto write_count = kMaxParallel + 2;
-  REQUIRE(kTestSequenceString.size() >= write_count);
+  REQUIRE_GE(kTestSequenceString.size(), write_count);
 
   std::vector<drain_sfuture> drains;
   for (size_t i = 0; i < write_count; i++) {
     drains.push_back(std::move(ifca.Write(kTestSequenceString[i])));
-  }
-
-  for (size_t i = 0; i < write_count; i++) {
-    auto &drain = drains[i];
-    INFO("For index: " << i);
-    if (i < kMaxParallel - 1)
-      CHECK(future_is_ready(drain) == true);
-    else
-      CHECK(future_is_ready(drain) == false);
   }
 
   std::vector<chunk_outtype> results;
@@ -304,72 +314,42 @@ TEST_CASE("Drain resolved when drops below limit") {
   for (size_t i = 0; i < write_count; i++) {
     auto &drain = drains[i];
     INFO("For index: " << i);
-    CHECK(future_is_ready(drain) == true);
+    CHECK(future_is_ready(drain));
   }
 }
 
 // Ending tests
 // ------------
 
-// OLLLLLLLLLLLLD
-
-TEST_CASE("reads exceeding writes") {
+TEST_CASE("Reading from empty Ifca") {
   auto ifca = Ifca(kMaxParallel);
-  std::vector<chunk_sfuture> results;
-  auto &&input_size = kTestSequenceString.size();
-  auto &extra_reads = kMaxParallel;
-  for (auto &&s : kTestSequenceString) {
-    ifca.Write(s);
-    results.push_back(std::move(ifca.Read()));
-  }
-  for (size_t i = 0; i < extra_reads; i++) {
-    results.push_back(std::move(ifca.Read()));
-  }
-  REQUIRE(results.size() == input_size + extra_reads);
-
   ifca.End();
-  auto isMultipleEnd = false;
-  try {
-    ifca.End();
-  } catch (const MultipleEnd &e) {
-    isMultipleEnd = true;
-  }
-  CHECK(isMultipleEnd == true);
-
-  auto exception_count = 0;
-  for (size_t i = 0; i < results.size(); i++) {
-    auto &result = results[i];
-    INFO("index: " << i);
-    CHECK(result.valid() == true);
-    if (i < input_size) {
-      CHECK(future_is_ready(result) == true);
-    } else {
-      try {
-        REQUIRE(future_is_ready(result) == true);
-        result.get();
-      } catch (const ReadEnd &e) {
-        ++exception_count;
-      }
-    }
-  }
-  REQUIRE(exception_count == extra_reads);
+  CHECK_THROWS_AS(ifca.Read().get(), ReadEnd &);
 }
 
-TEST_CASE("reads after end") {
+TEST_CASE("End with pending reads") {
   auto ifca = Ifca(kMaxParallel);
   std::vector<chunk_sfuture> results;
-  auto &&input_size = kTestSequenceString.size();
-  for (auto &&s : kTestSequenceString) {
-    ifca.Write(s);
-  }
-  ifca.End();
-  for (size_t i = 0; i < input_size; i++) {
+  for (size_t i = 0; i < kTestSequenceString.size(); i++) {
     results.push_back(std::move(ifca.Read()));
   }
-  auto equal =
-      std::equal(kTestSequenceString.begin(), kTestSequenceString.end(),
-                 results.begin(), sync_comparator);
-  REQUIRE(equal == true);
+  ifca.End();
+
+  for (auto &&result : results) {
+    CHECK_THROWS_AS(result.get(), ReadEnd &);
+  }
+}
+
+TEST_CASE("Write after end errors") {
+  auto ifca = Ifca(kMaxParallel);
+  ifca.End();
+  CHECK_THROWS_AS(ifca.Write(kTestSequenceString[0]), WriteAfterEnd &);
+}
+
+TEST_CASE("Multiple ends error") {
+  auto ifca = Ifca(kMaxParallel);
+  ifca.End();
+  CHECK_THROWS_AS(ifca.End(), MultipleEnd &);
 }
 
 }  // namespace ifca

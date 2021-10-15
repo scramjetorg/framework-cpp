@@ -27,7 +27,7 @@ class DrainState {
 
  protected:
   void CheckDrain();
-  bool IsDrainNeeded();
+  bool LimitExceeded();
   void DrainNeeded();
   void SetDrained();
 

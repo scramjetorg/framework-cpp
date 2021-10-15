@@ -1,3 +1,8 @@
+/**
+ * @brief Reference wraper to bypass implicit lvalue copy when passing
+ * forwarding reference to std::async lambda body
+ *
+ */
 template <typename T>
 class async_forwarder {
  public:

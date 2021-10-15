@@ -15,7 +15,7 @@ Ifca::Ifca(unsigned int max_parallel)
     : drain_state_(max_parallel), ended_(false) {
   std::promise<void> first_processing_promise;
   first_processing_promise.set_value();
-  processing_future_ = first_processing_promise.get_future();
+  last_processing_future_ = first_processing_promise.get_future();
 }
 
 Ifca::~Ifca() {}
@@ -38,21 +38,20 @@ drain_sfuture Ifca::Write(chunk_intype chunk) {
     drain_state_.ChunkReadReady();
   } else {
     drain_state_.ChunkStartedProcessing();
-    auto async_future = std::async(
+    last_processing_future_ = std::async(
         std::launch::async,
         [this](chunk_intype&& chunk,
                std::future<void>&& previous_processing_future) {
           for (auto&& transform : transforms_) {
             chunk = transform(chunk);
           }
-
           previous_processing_future.wait();
           auto result_promise = processing_promises_.take_front();
-          drain_state_.ChunkFinishedProcessing();
           result_promise.set_value(chunk);
+          drain_state_.ChunkFinishedProcessing();
         },
-        async_forwarder<chunk_intype>(chunk), std::move(processing_future_));
-    processing_future_ = std::move(async_future);
+        async_forwarder<chunk_intype>(chunk),
+        std::move(last_processing_future_));
   }
 
   return drain_state_;
@@ -61,6 +60,11 @@ drain_sfuture Ifca::Write(chunk_intype chunk) {
 chunk_future Ifca::Read() {
   drain_state_.ChunkRead();
   if (read_futures_.empty()) {
+    if (ended_) {
+      auto end_promise = chunk_promise();
+      setReadEnd(end_promise);
+      return end_promise.get_future();
+    }
     auto& read_ahead_promise =
         read_ahead_promises_.emplace_back(chunk_promise());
     return read_ahead_promise.get_future();
@@ -75,17 +79,27 @@ void Ifca::End() {
   if (ended_) throw MultipleEnd();
   ended_ = true;
   for (auto&& read_ahead : read_ahead_promises_) {
-    try {
-      throw ReadEnd();
-    } catch (const ReadEnd&) {
-      read_ahead.set_exception(std::current_exception());
-    }
+    setReadEnd(read_ahead);
   }
 }
 
-void Ifca::addTransform(
-    std::function<chunk_outtype(chunk_intype)>&& transform) {
-  transforms_.push_back(std::move(transform));
+void Ifca::addTransform(std::function<chunk_outtype(chunk_intype)>& transform) {
+  if (!transform) throw UncallableFunction();
+  transforms_.push_back(transform);
+}
+
+unsigned int Ifca::maxParallel() {
+  auto max_parallel = 2 * std::thread::hardware_concurrency();
+  if (max_parallel == 0) return 2;
+  return max_parallel;
+}
+
+void Ifca::setReadEnd(chunk_promise& promise) {
+  try {
+    throw ReadEnd();
+  } catch (const ReadEnd&) {
+    promise.set_exception(std::current_exception());
+  }
 }
 
 }  // namespace ifca

@@ -40,7 +40,7 @@ void DrainState::ChunkRead() {
 }
 
 void DrainState::CheckDrain() {
-  if (IsDrainNeeded()) {
+  if (LimitExceeded()) {
     std::lock_guard<std::mutex> m(drained_mutex);
     if (!drained_promise_) DrainNeeded();
   } else {
@@ -49,7 +49,7 @@ void DrainState::CheckDrain() {
   }
 }
 
-bool DrainState::IsDrainNeeded() {
+bool DrainState::LimitExceeded() {
   return processing_chunks_count_.load() +
              std::max(read_chunks_count_.load(), 0) >=
          max_parallel_;
