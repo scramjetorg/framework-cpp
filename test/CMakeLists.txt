@@ -25,7 +25,9 @@ else()
 endif()
 
 # ---- Create binary ----
-file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
+file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp
+     ${CMAKE_CURRENT_SOURCE_DIR}/source/*/*.cpp
+)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 add_executable(IFCATests ${sources})

@@ -1,5 +1,4 @@
 #include <doctest/doctest.h>
-#include <ifca/version.h>
 
 #include <algorithm>
 #include <array>
