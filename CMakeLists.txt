@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 # ---- Project ----
 
-# Note: update this to your new project's name and version
 project(
   IFCA
   VERSION 1.0
@@ -28,12 +27,8 @@ include(cmake/CPM.cmake)
 # PackageProject.cmake will be used to make our target installable
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.6.0")
 
-# CPMAddPackage(
-#   NAME fmt
-#   GIT_TAG 7.1.3
-#   GITHUB_REPOSITORY fmtlib/fmt
-#   OPTIONS "FMT_INSTALL YES" # create an installable target
-# )
+# CPMAddPackage( NAME fmt GIT_TAG 7.1.3 GITHUB_REPOSITORY fmtlib/fmt OPTIONS "FMT_INSTALL YES" #
+# create an installable target )
 
 # ---- Add source files ----
 
@@ -53,12 +48,16 @@ set_target_properties(IFCA PROPERTIES CXX_STANDARD 17)
 # being a cross-platform target, we enforce standards conformance on MSVC
 target_compile_options(IFCA PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
-# Link dependencies
-# target_link_libraries(IFCA PRIVATE fmt::fmt)
+# TODO: specify for unix build
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(IFCA PRIVATE Threads::Threads)
+
+# Link dependencies target_link_libraries(IFCA PRIVATE fmt::fmt)
 
 target_include_directories(
   IFCA PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-                 $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
+              $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
 # ---- Create an installable target ----

@@ -26,9 +26,13 @@ endif()
 
 # ---- Create binary ----
 file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 add_executable(IFCATests ${sources})
-target_link_libraries(IFCATests doctest::doctest IFCA::IFCA)
+target_link_libraries(IFCATests doctest::doctest IFCA::IFCA Threads::Threads)
 set_target_properties(IFCATests PROPERTIES CXX_STANDARD 17)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CFLAGS} -g")
 
 # enable compiler warnings
 if(NOT TEST_INSTALLED_VERSION)
