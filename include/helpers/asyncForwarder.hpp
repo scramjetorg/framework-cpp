@@ -1,3 +1,6 @@
+#ifndef ASYNC_FORWARDER_H
+#define ASYNC_FORWARDER_H
+
 /**
  * @brief Reference wraper to bypass implicit lvalue copy when passing
  * forwarding reference to std::async lambda body
@@ -31,3 +34,5 @@ class async_forwarder<T&> {
  private:
   T& val_;
 };
+
+#endif  // ASYNC_FORWARDER_H
