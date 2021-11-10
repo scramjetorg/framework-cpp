@@ -1,3 +1,6 @@
+#ifndef EXCEPTIONS_H
+#define EXCEPTIONS_H
+
 #include <exception>
 #include <future>
 
@@ -36,3 +39,5 @@ class UncallableFunction : public std::exception {
     return "Transform function must be callable";
   };
 };
+
+#endif  // EXCEPTIONS_H
