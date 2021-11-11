@@ -3,24 +3,25 @@
 
 #include <type_traits>
 
+#include "helpers/crtp.hpp"
+
 namespace ifca {
 
 template <typename T>
-class TransformExpression : public crtp<T, TransformExpression> {
+class TransformExpression : public crtp<T> {
  public:
+  using BaseType = crtp<T>;
+  using ExactType = typename BaseType::ExactType;
+
   template <typename... Args>
   void operator()(Args... args) {
     this->derived()(args...);
   }
-
- private:
-  TransformExpression(){};
-  friend T;
 };
 
 template <typename Transform>
 using IsTransformExpression = std::enable_if_t<
-    std::is_base_of<TransformExpression<Transform>, Transform>::value, bool>;
+    is_crtp_interface_of<TransformExpression, Transform>::value, bool>;
 
 }  // namespace ifca
 

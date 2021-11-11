@@ -7,12 +7,15 @@
 namespace ifca {
 
 template <typename Function>
-class EachTransform : public TransformExpression<EachTransform<Function>> {
+class EachTransform
+    : public CrtpImpl<EachTransform, Function, TransformExpression> {
  public:
+  using BaseType = CrtpImpl<EachTransform, Function, TransformExpression>;
+  using ExactType = typename BaseType::ExactType;
   explicit EachTransform(Function& function) : func_(function) {}
 
-  template <typename... Values, typename TailTransform >
-  void operator()(Values&&... values, TailTransform  transform) {
+  template <typename... Values, typename TailTransform>
+  void operator()(Values&&... values, TailTransform transform) {
     transform(FWD(func_(values...)));
   }
 

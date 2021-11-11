@@ -4,28 +4,28 @@
 #include <functional>
 
 #include "helpers/FWD.hpp"
-#include "transformExpression.hpp"
+#include "helpers/crtp.hpp"
+#include "orderedExpression.hpp"
 
 namespace ifca {
 
-// TODO: change according to spec
-template <typename OutStream>
-class IntoTransform : public TransformExpression<IntoTransform<OutStream>> {
+template <typename Function>
+class IntoTransform
+    : public CrtpImpl<IntoTransform, Function, OrderedExpression> {
  public:
-  explicit IntoTransform(OutStream& outStream) : out_stream_(outStream) {}
+  using BaseType = CrtpImpl<IntoTransform, Function, OrderedExpression>;
+  using ExactType = typename BaseType::ExactType;
+  explicit IntoTransform(Function& function) : function_(function) {}
 
-  template <typename T>
-  void operator()(T&& value) {
-    out_stream_.get() << FWD(value);
-  }
-  template <typename... Values, typename TailTransform >
-  void operator()(Values&&... values, TailTransform  tailTransform) {
-    // out_stream_.get() << (values...);
-    // tailTransform(FWD(values...));
+  template <typename... Values, typename TailTransform>
+  void operator()(Values&&... values, TailTransform tailTransform) {
+    function_(values...);  // FIXME: fix forwarding as tuple to save us from
+                           // unwanted copies
+    tailTransform(FWD(values)...);
   }
 
  private:
-  std::reference_wrapper<OutStream> out_stream_;
+  Function function_;  // TODO: add proper forwarding
 };
 
 template <typename OutStream>

@@ -10,7 +10,8 @@ namespace ifca {
 
 // TODO: change according to spec
 template <typename OutStream>
-class OutStreamTransform : public TransformExpression<OutStreamTransform<OutStream>> {
+class OutStreamTransform
+    : public CrtpImpl<OutStreamTransform, OutStream, TransformExpression> {
  public:
   explicit OutStreamTransform(OutStream& outStream) : out_stream_(outStream) {}
 

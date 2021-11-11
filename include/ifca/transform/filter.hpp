@@ -7,8 +7,11 @@
 namespace ifca {
 
 template <typename Predicate>
-class FilterTransform : public TransformExpression<FilterTransform<Predicate>> {
+class FilterTransform
+    : public CrtpImpl<FilterTransform, Predicate, TransformExpression> {
  public:
+  using BaseType = CrtpImpl<FilterTransform, Predicate, TransformExpression>;
+  using ExactType = typename BaseType::ExactType;
   explicit FilterTransform(Predicate& predicate) : predicate_(predicate){};
 
   template <typename... Values, typename TailTransform>
