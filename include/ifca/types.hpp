@@ -10,7 +10,6 @@ namespace ifca {
 
 using chunk_intype = std::string;
 
-using drain_promise = std::unique_ptr<std::promise<void>>;
 using drain_sfuture = std::shared_future<void>;
 
 using chunk_outtype = std::string;

@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-std::string time_now_str() {
+inline std::string time_now_str() {
   std::time_t t = std::time(0);
   std::tm* now = std::localtime(&t);
   std::stringstream time_now;
