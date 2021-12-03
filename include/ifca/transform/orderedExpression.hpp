@@ -12,8 +12,8 @@ template <typename Impl = CrtpFinalImpl>
 class OrderedExpression
     : public CrtpImpl<OrderedExpression, Impl, TransformExpression> {
  public:
-  using BaseType = CrtpImpl<OrderedExpression, Impl, TransformExpression>;
-  using ExactType = typename BaseType::ExactType;
+  using base_type = CrtpImpl<OrderedExpression, Impl, TransformExpression>;
+  using exact_type = typename base_type::exact_type;
 };
 
 template <typename Transform>

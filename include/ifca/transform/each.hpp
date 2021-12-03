@@ -12,8 +12,8 @@ template <typename Function>
 class EachTransform
     : public CrtpImpl<EachTransform, Function, TransformExpression> {
  public:
-  using BaseType = CrtpImpl<EachTransform, Function, TransformExpression>;
-  using ExactType = typename BaseType::ExactType;
+  using base_type = CrtpImpl<EachTransform, Function, TransformExpression>;
+  using exact_type = typename base_type::exact_type;
 
   using input_type = typename function_traits<Function>::template arg<0>;
   using result_type = typename function_traits<Function>::result_type;

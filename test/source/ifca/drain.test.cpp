@@ -1,8 +1,7 @@
-#include "ifca/drain.hpp"
-
 #include <doctest/doctest.h>
 
 #include "helpers/Logger/logger.hpp"
+#include "ifca/drain.hpp"
 
 TEST_CASE("Drain") {
   const auto maxParallel = 4;

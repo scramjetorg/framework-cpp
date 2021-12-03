@@ -10,8 +10,8 @@ namespace ifca {
 template <typename T>
 class TransformExpression : public crtp<T> {
  public:
-  using BaseType = crtp<T>;
-  using ExactType = typename BaseType::ExactType;
+  using base_type = crtp<T>;
+  using exact_type = typename base_type::exact_type;
 
   template <typename... Args>
   void operator()(Args... args) {
@@ -20,8 +20,12 @@ class TransformExpression : public crtp<T> {
 };
 
 template <typename Transform>
-using IsTransformExpression = std::enable_if_t<
-    is_crtp_interface_of<TransformExpression, Transform>::value, bool>;
+using IsTransformExpression =
+    is_crtp_interface_of<TransformExpression, Transform>;
+
+template <typename Transform>
+using EnableIfTransformExpression =
+    std::enable_if_t<IsTransformExpression<Transform>::value, Transform>;
 
 }  // namespace ifca
 

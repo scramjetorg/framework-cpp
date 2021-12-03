@@ -26,10 +26,10 @@ using CrtpImpl = Super<std::conditional_t<std::is_same_v<Impl, CrtpFinalImpl>,
 template <typename T>
 struct crtp {
   // used to get type needed by friend declarations and SFINAE
-  using ExactType = T;
-  ExactType& derived() { return static_cast<ExactType&>(*this); }
-  ExactType const& derived() const {
-    return static_cast<ExactType const&>(*this);
+  using exact_type = T;
+  exact_type& derived() { return static_cast<exact_type&>(*this); }
+  exact_type const& derived() const {
+    return static_cast<exact_type const&>(*this);
   }
 };
 
@@ -48,7 +48,7 @@ struct is_crtp_interface_of<
     CrtpInterface, Derived,
     std::enable_if_t<
         std::is_same_v<CrtpInterface<CrtpFinalImpl>, Derived> ||
-        std::is_base_of_v<CrtpInterface<typename Derived::ExactType>, Derived>>>
+        std::is_base_of_v<CrtpInterface<typename Derived::exact_type>, Derived>>>
     : std::true_type {};
 
 #endif  // CRTP_H

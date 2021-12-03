@@ -16,8 +16,8 @@ IfcaState::IfcaState(IfcaState&& other)
     : drain_state_(std::move(other.drain_state_)),
       last_processing_future_(std::move(other.last_processing_future_)),
       ended_(other.ended_) {
-        LOG_DEBUG() << "IfcaState move";
-      }
+  LOG_DEBUG() << "IfcaState move";
+}
 
 IfcaState& IfcaState::operator=(IfcaState&& other) {
   drain_state_ = std::move(other.drain_state_);

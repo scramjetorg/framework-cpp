@@ -12,8 +12,8 @@ template <typename Predicate>
 class FilterTransform
     : public CrtpImpl<FilterTransform, Predicate, TransformExpression> {
  public:
-  using BaseType = CrtpImpl<FilterTransform, Predicate, TransformExpression>;
-  using ExactType = typename BaseType::ExactType;
+  using base_type = CrtpImpl<FilterTransform, Predicate, TransformExpression>;
+  using exact_type = typename base_type::exact_type;
   using input_type = typename function_traits<Predicate>::template arg<0>;
   using result_type = input_type;
   explicit FilterTransform(Predicate& predicate) : predicate_(predicate){};
