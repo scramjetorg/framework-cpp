@@ -29,21 +29,21 @@ class IfcaMethods {
   using chunk_future = typename std::future<output_type>;
 
   IfcaMethods(unsigned int max_parallel) : state_(max_parallel){};
-  // IfcaMethods(IfcaState&& state) : state_(std::move(state)){};
+  IfcaMethods(IfcaState&& state) : state_(std::move(state)){};
 
-  IfcaMethods(IfcaMethods&& other)
-      : state_(std::move(other.state_)),
-        processing_promises_(std::move(other.processing_promises_)),
-        read_ahead_promises_(std::move(other.read_ahead_promises_)),
-        read_futures_(std::move(other.read_futures_)){};
+  // IfcaMethods(IfcaMethods&& other)
+  //     : state_(std::move(other.state_)),
+  //       processing_promises_(std::move(other.processing_promises_)),
+  //       read_ahead_promises_(std::move(other.read_ahead_promises_)),
+  //       read_futures_(std::move(other.read_futures_)){};
 
-  IfcaMethods& operator=(IfcaMethods&& other) {
-    state_ = std::move(other.state_);
-    processing_promises_ = std::move(other.processing_promises_);
-    read_ahead_promises_ = std::move(other.read_ahead_promises_);
-    read_futures_ = std::move(other.read_futures_);
-    return *this;
-  };
+  // IfcaMethods& operator=(IfcaMethods&& other) {
+  //   state_ = std::move(other.state_);
+  //   processing_promises_ = std::move(other.processing_promises_);
+  //   read_ahead_promises_ = std::move(other.read_ahead_promises_);
+  //   read_futures_ = std::move(other.read_futures_);
+  //   return *this;
+  // };
 
   Impl& derived() { return static_cast<Impl&>(*this); }
   Impl const& derived() const { return static_cast<Impl const&>(*this); }
@@ -68,8 +68,8 @@ class IfcaMethods {
                std::future<void>&& previous_processing_future) {
           try {
             auto&& transforms_result = derived()(FWD(chunk));
-            LOG_INFO() << "chunk transformed: "
-                       << typeid(transforms_result).name();
+            // LOG_INFO() << "chunk transformed: "
+            //            << typeid(transforms_result).name();
             previous_processing_future.wait();
             auto result_promise = processing_promises_.take_front();
             result_promise.set_value(transforms_result);
@@ -127,28 +127,6 @@ class IfcaMethods {
   std::list<chunk_promise> read_ahead_promises_;
   std::list<chunk_future> read_futures_;
 };
-
-inline unsigned int maxParallel() {
-  auto max_parallel = 2 * std::thread::hardware_concurrency();
-  if (max_parallel == 0) return 2;
-  return max_parallel;
-}
-
-/**
- * @brief Compile-time check for Ifca templates
- *
- * @tparam Derived Checked class
- * @tparam Enable Helper param
- */
-template <typename Derived, typename Enable = void>
-struct isIfcaInterface : std::false_type {};
-
-template <typename Derived>
-struct isIfcaInterface<Derived,
-                       std::enable_if_t<std::is_base_of_v<
-                           IfcaMethods<Derived, typename Derived::input_type,
-                                       typename Derived::result_type>,
-                           Derived>>> : std::true_type {};
 
 }  // namespace ifca
 

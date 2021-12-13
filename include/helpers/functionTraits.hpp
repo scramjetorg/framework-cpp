@@ -10,7 +10,7 @@ template <typename R, typename... Args>
 struct function_traits<std::function<R(Args...)>> {
   static const size_t nargs = sizeof...(Args);
 
-  using result_type = R;
+  using return_type = R;
 
   template <size_t i>
   using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;

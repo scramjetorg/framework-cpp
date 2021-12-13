@@ -14,18 +14,10 @@ class TransformExpression : public crtp<T> {
   using exact_type = typename base_type::exact_type;
 
   template <typename... Args>
-  void operator()(Args... args) {
-    this->derived()(args...);
+  void operator()(Args&&... args) {
+    this->derived()(FWD(args)...);
   }
 };
-
-template <typename Transform>
-using IsTransformExpression =
-    is_crtp_interface_of<TransformExpression, Transform>;
-
-template <typename Transform>
-using EnableIfTransformExpression =
-    std::enable_if_t<IsTransformExpression<Transform>::value, Transform>;
 
 }  // namespace ifca
 

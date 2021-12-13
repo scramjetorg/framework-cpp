@@ -5,51 +5,15 @@
 
 #include "helpers/FWD.hpp"
 #include "helpers/Logger/logger.hpp"
-#include "ifca/drain.hpp"
 #include "ifca/ifcaMethods.hpp"
-// #include "ifca/ifcaState.hpp"
-#include "helpers/indexSequenceReverse.hpp"
-#include "helpers/tupleCatTypes.hpp"
 #include "ifca/transform/transformExpression.hpp"
+#include "ifca/transform/isTransformExpression.hpp"
 #include "transformChain.hpp"
 #include "types.hpp"
+#include "ifca/maxParallel.hpp"
 
 // TODO: doxygen docs
 namespace ifca {
-
-template <typename TransformChain, typename Chunk, size_t S>
-struct unfoldTransforms {
-  auto operator()(TransformChain& transform, Chunk& chunk) {
-    LOG_DEBUG() << "Any run" << S;
-    return std::get<S>(transform)(
-        unfoldTransforms<TransformChain, Chunk, S - 1>()(transform, chunk));
-  };
-};
-
-template <typename TransformChain, typename Chunk>
-struct unfoldTransforms<TransformChain, Chunk, 0> {
-  auto operator()(TransformChain& transform, Chunk& chunk) {
-    LOG_DEBUG() << "Zero run";
-    return std::get<0>(transform)(chunk);
-  };
-};
-
-template <typename TransformChain, std::size_t... I>
-auto RunTransformChainImpl(TransformChain& /* transformChain */,
-                           std::index_sequence<I...>) {
-  std::array<int, sizeof...(I)> arr = {I...};
-  for (size_t i = 0; i < arr.size(); i++) {
-    LOG_DEBUG() << "Index: " << arr[i];
-  }
-}
-
-template <typename TransformChain,
-          typename Indices =
-              make_index_sequence_reverse<std::tuple_size_v<TransformChain>>>
-auto RunTransformChain(TransformChain& transformChain) {
-  LOG_DEBUG() << "Index size: " << Indices{}.size();
-  RunTransformChainImpl(transformChain, Indices{});
-}
 
 /**
  * @brief Base Ifca template
@@ -58,18 +22,24 @@ auto RunTransformChain(TransformChain& transformChain) {
  * @tparam Out Last transform in Ifca
  * @tparam IsTransformChain Template flag to help deduce template type
  */
-template <typename In, typename Out = void, typename IsTransformChain = void>
+template <typename In, typename Out, typename IsTransformChain = void>
 struct Ifca;
 
 template <typename InputType, typename OutputType>
 class Ifca<InputType, OutputType,
-           std::enable_if_t<!IsTransformExpression<InputType>::value &&
-                            !IsTransformExpression<OutputType>::value>> {
+           std::enable_if_t<!is_transform_expression_v<InputType> &&
+                            !is_transform_expression_v<OutputType>>>
+    : public IfcaMethods<Ifca<InputType, OutputType>, InputType, OutputType> {
  public:
   using Impl = Ifca<InputType, OutputType>;
+  using input_type = InputType;
+  using output_type = OutputType;
+  using base_type = IfcaMethods<Impl, input_type, output_type>;
   using transforms_type = transform_chain_t<>;
 
-  Ifca() { LOG_DEBUG() << "Empty Ifca created"; };
+  Ifca(unsigned int max_parallel = maxParallel()) : base_type(max_parallel) {
+    LOG_DEBUG() << "Empty Ifca created";
+  };
   ~Ifca() { LOG_DEBUG() << "Empty Ifca deleted"; };
 
   template <typename Chunk>
@@ -77,27 +47,30 @@ class Ifca<InputType, OutputType,
     return FWD(chunk);
   }
 
-  // template <typename Transform>
-  // std::enable_if_t<
-  //     IsTransformExpression<std::remove_reference_t<Transform>>::value,
-  //     Ifca<Impl, Transform>>
-  // operator+(Transform&& transform ) {
-  //   return Ifca<Impl, Transform>(FWD(transform) );
-  // }
+  template <typename, typename, typename>
+  friend class Ifca;
 
+ private:
   transforms_type transforms_;
 };
 
 template <typename CurrentIfca, typename NextTransform>
 class Ifca<CurrentIfca, NextTransform,
-           std::enable_if_t<IsTransformExpression<NextTransform>::value>> {
+           std::enable_if_t<is_transform_expression_v<NextTransform>>>
+    : public IfcaMethods<Ifca<CurrentIfca, NextTransform>,
+                         typename CurrentIfca::input_type,
+                         typename NextTransform::output_type> {
  public:
   using Impl = Ifca<CurrentIfca, NextTransform>;
+  using input_type = typename CurrentIfca::input_type;
+  using output_type = typename NextTransform::output_type;
+  using base_type = IfcaMethods<Impl, input_type, output_type>;
   using transforms_type =
       transform_chain_t<NextTransform, typename CurrentIfca::transforms_type>;
 
   Ifca(CurrentIfca&& currentIfca, NextTransform&& nextTransform)
-      : transforms_(ForwardTransformChain<typename CurrentIfca::transforms_type,
+      : base_type(std::move(currentIfca.state_)),
+        transforms_(ForwardTransformChain<typename CurrentIfca::transforms_type,
                                           NextTransform>(
             std::move(currentIfca.transforms_), std::move(nextTransform))) {
     LOG_DEBUG() << "Tuple Ifca created";
@@ -105,14 +78,40 @@ class Ifca<CurrentIfca, NextTransform,
   ~Ifca() { LOG_DEBUG() << "Tuple Ifca deleted"; };
 
   template <typename Chunk>
-  int operator()(Chunk&& chunk) {
-    return std::get<2>(transforms_)(
-        std::get<1>(transforms_)(FWD(std::get<0>(transforms_)(FWD(chunk)))));
-    // return FWD(chunk);
+  auto operator()(Chunk&& chunk) {
+    return unfoldTransforms(transforms_, FWD(chunk));
   }
 
+  template <typename, typename, typename>
+  friend class Ifca;
+
+ private:
   transforms_type transforms_;
 };
+
+template <typename CurrentIfca, typename NewTransform>
+// typename std::enable_if_t<>
+auto
+ operator+(CurrentIfca&& current_ifca, NewTransform&& new_transform) {
+  return Ifca<CurrentIfca, NewTransform>(FWD(current_ifca), FWD(new_transform));
+}
+
+// template <typename CurrentIfca, typename NewTransfrom>
+// typename std::enable_if_t<
+//     (
+//         // IsTransformExpression<CurrentIfca>::value ||
+//         (isIfcaInterface<CurrentIfca>::value &&
+//          std::is_same_v<Ifca<decltype(CurrentIfca::current_transform_),
+//                              decltype(CurrentIfca::next_transfrom_), bool>,
+//                         typename CurrentIfca::Impl>)) &&
+//         IsTransformExpression<NewTransfrom>::value,
+//     // Ifca<CurrentIfca, NewTransfrom, bool>
+//     bool>
+// operator+(CurrentIfca&& current_ifca,
+//           NewTransfrom&& new_transform) {
+//   Ifca<CurrentIfca, NewTransfrom, bool>(std::move(current_ifca),
+//   FWD(new_transform)); return true;
+// }
 
 // /**
 //  * @brief Template specialization for empty ifca

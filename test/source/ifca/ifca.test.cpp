@@ -7,6 +7,7 @@
 #include "helpers/Logger/logger.hpp"
 #include "ifca/transform/each.hpp"
 #include "ifca/transform/filter.hpp"
+#include "ifca/isIfcaInterface.hpp"
 
 namespace ifca {
 
@@ -22,7 +23,8 @@ TEST_CASE("Ifca implementation") {
   auto T1 = Each(each);
   auto T2 = Each(each);
   auto T3 = Each(each);
-  using T1_type = decltype(T1);
+  auto T4 = Each(each);
+  using T_type = decltype(Each(each));
 
   SUBCASE("Ifca tuple") {
     Ifca<int, int> emptyIfca;
@@ -30,82 +32,31 @@ TEST_CASE("Ifca implementation") {
     int res = emptyIfca(chunk);
     CHECK_EQ(chunk, res);
 
-    Ifca<decltype(emptyIfca), T1_type> ifca(std::move(emptyIfca),
+    Ifca<decltype(emptyIfca), T_type> ifca(std::move(emptyIfca),
                                             std::move(T1));
 
-    Ifca<decltype(ifca), T1_type> ifca2(std::move(ifca), std::move(T2));
-    Ifca<decltype(ifca2), T1_type> ifca3(std::move(ifca2), std::move(T3));
-    int ifcaRes = ifca3(chunk);
-    CHECK_EQ(chunk + 3, ifcaRes);
+    Ifca<decltype(ifca), T_type> ifca2(std::move(ifca), std::move(T2));
+    Ifca<decltype(ifca2), T_type> ifca3(std::move(ifca2), std::move(T3));
+    CHECK_EQ(chunk + 3, ifca3(chunk));
 
-    RunTransformChain<decltype(ifca3.transforms_)>(ifca3.transforms_);
+    auto ifca4 = std::move(ifca3) + std::move(T4);
+    CHECK_EQ(chunk + 4, ifca4(chunk));
 
-    LOG_ERROR()
-        << "Unfold 0: "
-        << unfoldTransforms<decltype(ifca3.transforms_), decltype(chunk), 0>()(
-               ifca3.transforms_, chunk);
-    LOG_ERROR() << "Unfold: " <<
-        unfoldTransforms<decltype(ifca3.transforms_), decltype(chunk),
-                         std::tuple_size_v<decltype(ifca3.transforms_)> - 1U>()(
-            ifca3.transforms_, chunk);
-    // emptyIfca + T1;  // TODO: check why not working with lvalue
-    // emptyIfca + Each(each);
-
-    // using emptyTuple = transform_chain<>::type;
-    // // LOG_WARNING() << std::get<0>(tup0);
-    // using firstTuple = transform_chain<int, emptyTuple>::type;
-    // firstTuple tup = {1};
-    // LOG_WARNING() << std::get<0>(tup);
-    // using secondTuple = transform_chain<double, firstTuple>::type;
-    // secondTuple tup2 = {5, 2.20};
-    // LOG_WARNING() << std::get<0>(tup2);
-    // LOG_WARNING() << std::get<1>(tup2);
-
-    // struct testClass {
-    //   testClass() { LOG_DEBUG() << "TestClass created"; }
-    //   testClass(const testClass&) { LOG_DEBUG() << "TestClass copied"; }
-    //   testClass& operator=(const testClass&) {
-    //     LOG_DEBUG() << "TestClass copied=";
-    //     return *this;
-    //   }
-    //   testClass(testClass&&) { LOG_DEBUG() << "TestClass moved"; }
-    //   testClass& operator=(testClass&&) {
-    //     LOG_DEBUG() << "TestClass moved=";
-    //     return *this;
-    //   }
-    //   ~testClass() { LOG_DEBUG() << "TestClass deleted"; }
-    // };
-    // std::tuple<int, int, testClass> t;
-    // auto t1 = std::make_tuple(1);
-    // {
-    //   auto t2 = std::make_tuple(2);
-    //   auto t3 = std::make_tuple(testClass());
-    //   LOG_WARNING() << "CAT";
-    //   t = std::tuple_cat(t1, t2, t3);
-    //   LOG_INFO() << std::get<0>(t1);
-    //   LOG_INFO() << std::get<0>(t2);
-    // }
-    // LOG_INFO() << std::get<1>(t);
-    // LOG_INFO() << std::get<0>(t1);
-
-    // auto chain = MoveToTransfomChain<std::tuple<int>, int>(std::move(t1), 1);
-    // LOG_INFO() << std::get<0>(chain) << std::get<1>(chain);
-    LOG_WARNING() << "This is the end";
-    // CHECK_EQ(nexIfca, 0);
+    auto ifca5 = std::move(ifca4) + Each(each);
+    CHECK_EQ(chunk + 5, ifca5(chunk));
   }
 
   // FIXME: why it crashes when auto- check behaviour for reference values
-  // int testValue = 11;
+  int testValue = 11;
   // int testValue2 = 12;
 
-  // SUBCASE("Empty Ifca") {
-  //   auto emptyIfca = Ifca<int, int>();
-  //   REQUIRE(isIfcaInterface<decltype(emptyIfca)>::value);
-  //   emptyIfca.write(testValue);
-  //   auto&& res = emptyIfca.read().get();
-  //   LOG_INFO() << "Empty Ifca result: " << res;
-  //   CHECK_EQ(testValue, res);
-  // }
+  SUBCASE("Empty Ifca") {
+    auto emptyIfca = Ifca<int, int>();
+    REQUIRE(is_ifca_interface_v<decltype(emptyIfca)>);
+    emptyIfca.write(testValue);
+    auto&& res = emptyIfca.read().get();
+    CHECK_EQ(testValue, res);
+  }
 
   // SUBCASE("Empty Ifca sum") {
   //   auto emptyIfcaSum = Ifca<int, int>() + Each(each);
