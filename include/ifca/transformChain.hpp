@@ -3,7 +3,7 @@
 
 #include <tuple>
 
-//TODO: add namespace
+// TODO: add namespace
 
 /**
  * @brief Helper class to deduce type of  chained transforms
@@ -90,10 +90,10 @@ struct unfoldTransformsImpl<TransformChain, 0> {
  * @return result of transformations of given chunk
  */
 template <typename TransformChain, typename Chunk>
-auto unfoldTransforms(TransformChain& transformChain, Chunk& chunk) {
+auto unfoldTransforms(TransformChain& transformChain, Chunk&& chunk) {
   return unfoldTransformsImpl<TransformChain,
                               std::tuple_size_v<TransformChain> - 1U>()(
-      transformChain, chunk);
+      transformChain, FWD(chunk));
 }
 
 #endif  // TRANSFORM_CHAIN_H

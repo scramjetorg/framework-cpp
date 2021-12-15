@@ -46,9 +46,9 @@ struct is_crtp_interface_of : std::false_type {};
 template <template <typename> class CrtpInterface, typename Derived>
 struct is_crtp_interface_of<
     CrtpInterface, Derived,
-    std::enable_if_t<
-        std::is_same_v<CrtpInterface<CrtpFinalImpl>, Derived> ||
-        std::is_base_of_v<CrtpInterface<typename Derived::exact_type>, Derived>>>
+    std::enable_if_t<std::is_same_v<CrtpInterface<CrtpFinalImpl>, Derived> ||
+                     std::is_base_of_v<
+                         CrtpInterface<typename Derived::exact_type>, Derived>>>
     : std::true_type {};
 
 #endif  // CRTP_H

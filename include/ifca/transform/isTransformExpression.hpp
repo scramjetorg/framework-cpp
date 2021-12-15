@@ -3,13 +3,16 @@
 
 #include <type_traits>
 
+#include "helpers/crtp.hpp"
+#include "ifca/transform/transformExpression.hpp"
+
 // #include "helpers/crtp.hpp"
 
 namespace ifca {
 
 /**
  * @brief Compile-time check for derived from TransformExpression classes
- * 
+ *
  * @tparam Transform to check
  */
 template <typename Transform>

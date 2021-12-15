@@ -68,11 +68,9 @@ class IfcaMethods {
                std::future<void>&& previous_processing_future) {
           try {
             auto&& transforms_result = derived()(FWD(chunk));
-            // LOG_INFO() << "chunk transformed: "
-            //            << typeid(transforms_result).name();
             previous_processing_future.wait();
             auto result_promise = processing_promises_.take_front();
-            result_promise.set_value(transforms_result);
+            result_promise.set_value(FWD(transforms_result));
           } catch (std::invalid_argument& e) {
             printf("CATCHED\n");
           }
