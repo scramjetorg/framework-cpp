@@ -1,7 +1,7 @@
 #ifndef LOGGER_IMPL_H
 #define LOGGER_IMPL_H
 
-#include <fstream>  // FIXME: only for file logs
+#include <fstream>
 #include <mutex>
 #include <sstream>
 

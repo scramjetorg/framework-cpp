@@ -1,13 +1,13 @@
 #ifndef IFCA_METHODS_H
 #define IFCA_METHODS_H
 
-#include <thread>
+#include <future>
 
 #include "helpers/Logger/logger.hpp"
 #include "helpers/asyncForwarder.hpp"
 #include "helpers/threadList.hpp"
+#include "ifca/drain.hpp"
 #include "ifca/exceptions.hpp"
-#include "ifca/ifcaState.hpp"
 #include "ifca/types.hpp"
 
 namespace ifca {
@@ -24,32 +24,36 @@ namespace ifca {
 template <typename Impl, typename input_type, typename output_type>
 class IfcaMethods {
  public:
-  // using exact_type = Impl;
   using chunk_promise = typename std::promise<output_type>;
   using chunk_future = typename std::future<output_type>;
 
-  IfcaMethods(unsigned int max_parallel) : state_(max_parallel){};
-  IfcaMethods(IfcaState&& state) : state_(std::move(state)){};
+  IfcaMethods(unsigned int max_parallel)
+      : drain_state_(max_parallel), ended_(false) {
+    std::promise<void> first_processing_promise;
+    first_processing_promise.set_value();
+    last_processing_future_ = first_processing_promise.get_future();
+  }
 
-  // IfcaMethods(IfcaMethods&& other)
-  //     : state_(std::move(other.state_)),
-  //       processing_promises_(std::move(other.processing_promises_)),
-  //       read_ahead_promises_(std::move(other.read_ahead_promises_)),
-  //       read_futures_(std::move(other.read_futures_)){};
+  template <typename OtherIfcaMethods>
+  IfcaMethods(OtherIfcaMethods&& other)
+      : drain_state_(std::move(other.drain_state_)),
+        last_processing_future_(std::move(other.last_processing_future_)),
+        ended_(std::move(other.ended_)) {
+    static_assert(!std::is_lvalue_reference_v<OtherIfcaMethods>,
+                  "Only move constructor allowed");
+  }
 
-  // IfcaMethods& operator=(IfcaMethods&& other) {
-  //   state_ = std::move(other.state_);
-  //   processing_promises_ = std::move(other.processing_promises_);
-  //   read_ahead_promises_ = std::move(other.read_ahead_promises_);
-  //   read_futures_ = std::move(other.read_futures_);
-  //   return *this;
-  // };
+  ~IfcaMethods() {
+    if (!ended_) end();
+    if (!last_processing_future_.valid()) return;
+    last_processing_future_.wait();
+  };
 
   Impl& derived() { return static_cast<Impl&>(*this); }
   Impl const& derived() const { return static_cast<Impl const&>(*this); }
 
   drain_sfuture write(input_type chunk) {
-    if (state_.ended_) throw WriteAfterEnd();
+    if (ended_) throw WriteAfterEnd();
 
     // TODO: check how much is processing then create
     if (read_ahead_promises_.empty()) {
@@ -61,8 +65,8 @@ class IfcaMethods {
       processing_promises_.push_back(std::move(read_ahead_promise));
     }
 
-    state_.drain_state_.ChunkStartedProcessing();
-    state_.last_processing_future_ = std::async(
+    drain_state_.ChunkStartedProcessing();
+    last_processing_future_ = std::async(
         std::launch::async,
         [this](input_type&& chunk,
                std::future<void>&& previous_processing_future) {
@@ -72,23 +76,22 @@ class IfcaMethods {
             auto result_promise = processing_promises_.take_front();
             result_promise.set_value(FWD(transforms_result));
           } catch (std::invalid_argument& e) {
-            printf("CATCHED\n");
+            // TODO: add new exception type for handling filtering
+            // TODO: add deleter for Filtered values
           }
-          state_.drain_state_.ChunkFinishedProcessing();
+          drain_state_.ChunkFinishedProcessing();
         },
-        async_forwarder<input_type>(chunk),
-        std::move(state_.last_processing_future_));
+        async_forwarder<input_type>(chunk), std::move(last_processing_future_));
 
-    return state_.drain_state_;
+    return drain_state_;
   }
 
   chunk_future read() {
-    state_.drain_state_.ChunkRead();
+    drain_state_.ChunkRead();
     if (read_futures_.empty()) {
-      if (state_.ended_) {
+      if (ended_) {
         auto end_promise = chunk_promise();
         setReadEnd(end_promise);
-        LOG_ERROR() << "4";
         return end_promise.get_future();
       }
       auto& read_ahead_promise =
@@ -102,8 +105,8 @@ class IfcaMethods {
   }
 
   void end() {
-    if (state_.ended_) throw MultipleEnd();
-    state_.ended_ = true;
+    if (ended_) throw MultipleEnd();
+    ended_ = true;
     for (auto&& read_ahead : read_ahead_promises_) {
       setReadEnd(read_ahead);
     }
@@ -118,7 +121,12 @@ class IfcaMethods {
     }
   }
 
-  IfcaState state_;
+  template <typename, typename, typename>
+  friend class IfcaMethods;
+
+  DrainState drain_state_;
+  std::future<void> last_processing_future_;
+  bool ended_;
 
  private:
   ThreadList<chunk_promise> processing_promises_;

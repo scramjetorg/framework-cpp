@@ -16,14 +16,15 @@ class FilterTransform
   using base_type = CrtpImpl<FilterTransform, Predicate, TransformExpression>;
   using exact_type = typename base_type::exact_type;
   using input_type = typename function_traits<Predicate>::template arg<0>;
-  using output_type = typename function_traits<Predicate>::return_type;
+  using output_type = typename function_traits<Predicate>::template arg<0>;
   explicit FilterTransform(Predicate& predicate) : predicate_(predicate){};
 
   template <typename Value>
-  output_type operator()(Value&& value) {
+  Value operator()(Value&& value) {
     if (predicate_(value)) {
       return FWD(value);
     }
+    // FIXME: Get rid of throw for optimalization purpose
     throw std::invalid_argument("Filtered");
   }
 

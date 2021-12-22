@@ -11,7 +11,7 @@
 namespace ifca {
 
 TEST_CASE("Ifca implementation") {
-  std::function filter = [](int& chunk) -> int {
+  std::function filter = [](int& chunk) -> bool {
     INFO("filter call ", chunk);
     return chunk % 2;
   };
@@ -61,14 +61,14 @@ TEST_CASE("Ifca implementation") {
   }
 
   SUBCASE("Ifca filter") {
-    auto ifca =
-        Ifca<EmptyIfca_type, T_type>(std::move(emptyIfca), std::move(T1)) +
-        Filter(filter);
+    auto ifca = Ifca<EmptyIfca_type, decltype(Filter(filter))>(
+                    std::move(emptyIfca), Filter(filter)) +
+                std::move(T1);
 
     ifca.write(testValue);
     ifca.write(testValue2);
     auto&& res = ifca.read().get();
-    CHECK_EQ(testValue + 2, res);
+    CHECK_EQ(testValue + 1, res);
   }
 }
 

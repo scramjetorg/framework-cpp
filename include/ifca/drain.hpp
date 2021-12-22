@@ -26,8 +26,6 @@ class DrainState {
 
   void ChunkStartedProcessing();
   void ChunkFinishedProcessing();
-  // TODO: check if needed in generic version
-  void ChunkReadReady();
   void ChunkRead();
 
  protected:

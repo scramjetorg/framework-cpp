@@ -52,11 +52,6 @@ void DrainState::ChunkFinishedProcessing() {
   CheckDrain();
 }
 
-void DrainState::ChunkReadReady() {
-  read_chunks_count_++;
-  CheckDrain();
-}
-
 void DrainState::ChunkRead() {
   read_chunks_count_--;
   CheckDrain();

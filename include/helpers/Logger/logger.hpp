@@ -12,8 +12,8 @@
 #define LOG_LVL LOG_LEVEL_ALL
 
 #include "emptyLogger.hpp"
-#include "helpers/time.hpp"
 #include "logMessage.hpp"
+#include "time.hpp"
 
 #if LOG_LVL >= LOG_LEVEL_DEBUG
 #define LOG_DEBUG() \

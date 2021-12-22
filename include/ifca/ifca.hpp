@@ -13,7 +13,7 @@
 #include "transformChain.hpp"
 #include "types.hpp"
 
-// TODO: doxygen docs
+// TODO: Lock methods returning void type if not final
 namespace ifca {
 
 /**
@@ -40,10 +40,7 @@ class Ifca<InputType, OutputType,
   using base_type = IfcaMethods<Impl, input_type, output_type>;
   using transforms_type = transform_chain_t<>;
 
-  Ifca(unsigned int max_parallel = maxParallel()) : base_type(max_parallel) {
-    LOG_DEBUG() << "Empty Ifca created";
-  };
-  ~Ifca() { LOG_DEBUG() << "Empty Ifca deleted"; };
+  Ifca(unsigned int max_parallel = maxParallel()) : base_type(max_parallel){};
 
   template <typename Chunk>
   Chunk operator()(Chunk&& chunk) {
@@ -73,13 +70,10 @@ class Ifca<CurrentIfca, NextTransform,
       transform_chain_t<NextTransform, typename CurrentIfca::transforms_type>;
 
   Ifca(CurrentIfca&& currentIfca, NextTransform&& nextTransform)
-      : base_type(std::move(currentIfca.state_)),
+      : base_type(std::move(currentIfca)),
         transforms_(ForwardTransformChain<typename CurrentIfca::transforms_type,
                                           NextTransform>(
-            std::move(currentIfca.transforms_), std::move(nextTransform))) {
-    LOG_DEBUG() << "Tuple Ifca created";
-  };
-  ~Ifca() { LOG_DEBUG() << "Tuple Ifca deleted"; };
+            std::move(currentIfca.transforms_), std::move(nextTransform))){};
 
   template <typename Chunk>
   auto operator()(Chunk&& chunk) {
