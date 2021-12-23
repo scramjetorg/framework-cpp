@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <future>
+#include <memory>
 #include <mutex>
 
 #include "types.hpp"
@@ -13,16 +14,18 @@ class DrainState {
  public:
   explicit DrainState(unsigned int max_parallel);
   DrainState(const DrainState&) = delete;
-  DrainState(DrainState&&) = delete;
+  DrainState(DrainState&&);
   DrainState& operator=(const DrainState&) = delete;
-  DrainState& operator=(DrainState&&) = delete;
+  DrainState& operator=(DrainState&&);
   ~DrainState() = default;
 
+  bool drainOccured();
+  bool drained();
+  drain_sfuture get();
   operator drain_sfuture();
 
   void ChunkStartedProcessing();
   void ChunkFinishedProcessing();
-  void ChunkReadReady();
   void ChunkRead();
 
  protected:
@@ -32,10 +35,10 @@ class DrainState {
   void SetDrained();
 
  private:
-  const unsigned int max_parallel_;
+  unsigned int max_parallel_;
 
   std::mutex drained_mutex;
-  drain_promise drained_promise_;
+  std::unique_ptr<std::promise<void>> drained_promise_;
   drain_sfuture drained_sfuture_;
 
   std::atomic_uint processing_chunks_count_;

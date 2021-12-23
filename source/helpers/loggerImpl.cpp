@@ -1,6 +1,7 @@
+#include "helpers/Logger/loggerImpl.hpp"
+
 #include <iostream>
 
-#include "helpers/Logger/loggerImpl.hpp"
 #include "helpers/Logger/terminalColorCodes.hpp"
 
 Logger* Logger::instance_ = nullptr;

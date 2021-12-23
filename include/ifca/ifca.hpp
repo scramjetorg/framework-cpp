@@ -1,54 +1,99 @@
 #ifndef IFCA_H
 #define IFCA_H
 
-#include <atomic>
-#include <functional>
-#include <future>
-#include <list>
-#include <mutex>
-#include <vector>
+#include <type_traits>
 
-#include "helpers/threadList.hpp"
-#include "ifca/drain.hpp"
+#include "helpers/FWD.hpp"
+#include "helpers/Logger/logger.hpp"
+#include "ifca/ifcaMethods.hpp"
+#include "ifca/isIfcaInterface.hpp"
+#include "ifca/maxParallel.hpp"
+#include "ifca/transform/isTransformExpression.hpp"
+#include "ifca/transform/transformExpression.hpp"
+#include "transformChain.hpp"
 #include "types.hpp"
 
-// TODO: doxygen docs
+// TODO: Lock methods returning void type if not final
 namespace ifca {
 
-class Ifca {
+/**
+ * @brief Base Ifca template
+ *
+ * @tparam In Begining of transforms of Ifca
+ * @tparam Out Last transform in Ifca
+ * @tparam IsTransformChain Template flag to help deduce template type
+ */
+template <typename In, typename Out, typename IsTransformChain = void>
+struct Ifca;
+
+template <typename InputType, typename OutputType>
+class Ifca<InputType, OutputType,
+           std::enable_if_t<!is_transform_expression_v<InputType> &&
+                            !is_ifca_interface_v<InputType> &&
+                            !is_transform_expression_v<OutputType> &&
+                            !is_ifca_interface_v<OutputType>>>
+    : public IfcaMethods<Ifca<InputType, OutputType>, InputType, OutputType> {
  public:
-  explicit Ifca(unsigned int max_parallel = maxParallel());
-  Ifca(const Ifca&) = delete;
-  Ifca(Ifca&&) = delete;
-  Ifca& operator=(const Ifca&) = delete;
-  Ifca& operator=(Ifca&&) = delete;
-  ~Ifca();
+  using Impl = Ifca<InputType, OutputType>;
+  using input_type = InputType;
+  using output_type = OutputType;
+  using base_type = IfcaMethods<Impl, input_type, output_type>;
+  using transforms_type = transform_chain_t<>;
 
-  // future set - no drain | future waitnig = drain
-  drain_sfuture Write(chunk_intype chunk);  // TODO: handle rvalue argumenst
-  chunk_future Read();
-  void End();
+  Ifca(unsigned int max_parallel = maxParallel()) : base_type(max_parallel){};
 
-  void addTransform(transform_type& transform);
+  template <typename Chunk>
+  Chunk operator()(Chunk&& chunk) {
+    return FWD(chunk);
+  }
 
- protected:
-  static unsigned int maxParallel();
-  void setReadEnd(chunk_promise& promise);
+  template <typename, typename, typename>
+  friend class Ifca;
 
  private:
-  DrainState drain_state_;
-
-  ThreadList<chunk_promise> processing_promises_;
-
-  std::future<void> last_processing_future_;
-
-  std::list<chunk_promise> read_ahead_promises_;
-  std::list<chunk_future> read_futures_;
-
-  bool ended_;
-
-  std::vector<transform_type> transforms_;
+  transforms_type transforms_;
 };
+
+template <typename CurrentIfca, typename NextTransform>
+class Ifca<CurrentIfca, NextTransform,
+           std::enable_if_t<is_ifca_interface_v<CurrentIfca> &&
+                            is_transform_expression_v<NextTransform>>>
+    : public IfcaMethods<Ifca<CurrentIfca, NextTransform>,
+                         typename CurrentIfca::input_type,
+                         typename NextTransform::output_type> {
+ public:
+  using Impl = Ifca<CurrentIfca, NextTransform>;
+  using input_type = typename CurrentIfca::input_type;
+  using output_type = typename NextTransform::output_type;
+  using base_type = IfcaMethods<Impl, input_type, output_type>;
+  using transforms_type =
+      transform_chain_t<NextTransform, typename CurrentIfca::transforms_type>;
+
+  Ifca(CurrentIfca&& currentIfca, NextTransform&& nextTransform)
+      : base_type(std::move(currentIfca)),
+        transforms_(ForwardTransformChain<typename CurrentIfca::transforms_type,
+                                          NextTransform>(
+            std::move(currentIfca.transforms_), std::move(nextTransform))){};
+
+  template <typename Chunk>
+  auto operator()(Chunk&& chunk) {
+    return unfoldTransforms(transforms_, FWD(chunk));
+  }
+
+  template <typename, typename, typename>
+  friend class Ifca;
+
+ private:
+  transforms_type transforms_;
+};
+
+template <typename CurrentIfca, typename NewTransform>
+typename std::enable_if_t<is_ifca_interface_v<CurrentIfca> &&
+                              is_transform_expression_v<NewTransform>,
+                          Ifca<CurrentIfca, NewTransform>>
+operator+(CurrentIfca&& current_ifca, NewTransform&& new_transform) {
+  return Ifca<CurrentIfca, NewTransform>(FWD(current_ifca), FWD(new_transform));
+}
 
 }  // namespace ifca
 
