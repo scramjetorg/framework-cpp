@@ -2,6 +2,7 @@
 #define EACH_H
 
 #include "helpers/FWD.hpp"
+#include "helpers/Logger/logger.hpp"
 #include "helpers/functionTraits.hpp"
 #include "transformExpression.hpp"
 
@@ -14,15 +15,26 @@ class EachTransform
  public:
   using base_type = CrtpImpl<EachTransform, Function, TransformExpression>;
   using exact_type = typename base_type::exact_type;
-
   using input_type = typename function_traits<Function>::template arg<0>;
   using output_type = typename function_traits<Function>::return_type;
 
   explicit EachTransform(Function& function) : func_(function) {}
 
-  template <typename Value>
-  output_type operator()(Value&& value) {
-    return FWD(func_(value));
+  template <typename Chunk, typename ResolveCallback, typename RejectCallback,
+            typename NextTransform, typename... TransformChain>
+  void operator()(Chunk&& chunk, ResolveCallback&& resolve,
+                  RejectCallback&& reject, NextTransform&& next,
+                  TransformChain&&... transforms) {
+    LOG_DEBUG() << "Next from filter";
+    next(std::forward<Function>(func_)(FWD(chunk)), FWD(resolve), FWD(reject),
+         FWD(transforms)...);
+  }
+
+  template <typename Chunk, typename ResolveCallback, typename RejectCallback>
+  void operator()(Chunk&& chunk, ResolveCallback&& resolve, RejectCallback&&) {
+    LOG_DEBUG() << "Resolve from each" << chunk;
+    // TODO: should be FWD(chunk) to get rid of implicit copies
+    resolve(std::forward<Function>(func_)(FWD(chunk)));
   }
 
  private:

@@ -17,6 +17,14 @@ namespace ifca {
  *
  * IfcaMethods is a base ifca class attached with CRTP
  *
+ * Derived classes should provide methods:
+ *
+ * using input_type = ...;
+ * using output_type = ...;
+ *
+ * void operator()(input_type&& chunk, std::future<void>&&
+ * previous_processing_future)
+ *
  * @tparam Impl typename used to cast on derived methods
  * @tparam input_type input type used by ifca algorithm
  * @tparam output_type output type used by ifca algorithm
@@ -70,16 +78,7 @@ class IfcaMethods {
         std::launch::async,
         [this](input_type&& chunk,
                std::future<void>&& previous_processing_future) {
-          try {
-            auto&& transforms_result = derived()(FWD(chunk));
-            previous_processing_future.wait();
-            auto result_promise = processing_promises_.take_front();
-            result_promise.set_value(FWD(transforms_result));
-          } catch (std::invalid_argument& e) {
-            // TODO: add new exception type for handling filtering
-            // TODO: add deleter for Filtered values
-          }
-          drain_state_.ChunkFinishedProcessing();
+          derived()(FWD(chunk), std::move(previous_processing_future));
         },
         async_forwarder<input_type>(chunk), std::move(last_processing_future_));
 
@@ -121,15 +120,30 @@ class IfcaMethods {
     }
   }
 
+  template <typename Chunk>
+  void onResolve(Chunk&& chunk,
+                 std::future<void>&& previous_processing_future) {
+    LOG_DEBUG() << "Chunk resolved: " << chunk;
+    previous_processing_future.wait();
+    auto&& result_promise = processing_promises_.take_front();
+    result_promise.set_value(FWD(chunk));
+    drain_state_.ChunkFinishedProcessing();
+  }
+
+  void onReject() {
+    LOG_DEBUG() << "Chunk rejected";
+    drain_state_.ChunkFinishedProcessing();
+  }
+
   template <typename, typename, typename>
   friend class IfcaMethods;
 
   DrainState drain_state_;
   std::future<void> last_processing_future_;
   bool ended_;
+  ThreadList<chunk_promise> processing_promises_;
 
  private:
-  ThreadList<chunk_promise> processing_promises_;
   std::list<chunk_promise> read_ahead_promises_;
   std::list<chunk_future> read_futures_;
 };
