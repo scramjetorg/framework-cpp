@@ -86,10 +86,8 @@ class FilterTransform<
                   RejectCallback&& reject, NextTransform&& next,
                   TransformChain&&... transforms) {
     if (predicate_(chunk)) {
-      LOG_DEBUG() << "Next from filter";
       next(FWD(chunk), FWD(resolve), FWD(reject), FWD(transforms)...);
     } else {
-      LOG_DEBUG() << "Reject from filter with chain";
       reject();
     }
   }
@@ -99,9 +97,7 @@ class FilterTransform<
                   RejectCallback&& reject) {
     if (predicate_(chunk)) {
       resolve(FWD(chunk));
-      LOG_DEBUG() << "Resolve from filter";
     } else {
-      LOG_DEBUG() << "Resolve from filter";
       reject();
     }
   }

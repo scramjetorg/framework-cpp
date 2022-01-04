@@ -123,17 +123,13 @@ class IfcaMethods {
   template <typename Chunk>
   void onResolve(Chunk&& chunk,
                  std::future<void>&& previous_processing_future) {
-    LOG_DEBUG() << "Chunk resolved: " << chunk;
     previous_processing_future.wait();
     auto&& result_promise = processing_promises_.take_front();
     result_promise.set_value(FWD(chunk));
     drain_state_.ChunkFinishedProcessing();
   }
 
-  void onReject() {
-    LOG_DEBUG() << "Chunk rejected";
-    drain_state_.ChunkFinishedProcessing();
-  }
+  void onReject() { drain_state_.ChunkFinishedProcessing(); }
 
   template <typename, typename, typename>
   friend class IfcaMethods;

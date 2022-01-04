@@ -25,15 +25,12 @@ class EachTransform
   void operator()(Chunk&& chunk, ResolveCallback&& resolve,
                   RejectCallback&& reject, NextTransform&& next,
                   TransformChain&&... transforms) {
-    LOG_DEBUG() << "Next from filter";
     next(std::forward<Function>(func_)(FWD(chunk)), FWD(resolve), FWD(reject),
          FWD(transforms)...);
   }
 
   template <typename Chunk, typename ResolveCallback, typename RejectCallback>
   void operator()(Chunk&& chunk, ResolveCallback&& resolve, RejectCallback&&) {
-    LOG_DEBUG() << "Resolve from each" << chunk;
-    // TODO: should be FWD(chunk) to get rid of implicit copies
     resolve(std::forward<Function>(func_)(FWD(chunk)));
   }
 

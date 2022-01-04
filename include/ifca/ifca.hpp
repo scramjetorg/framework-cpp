@@ -23,9 +23,14 @@ namespace ifca {
  * @tparam Out Last transform in Ifca
  * @tparam IsTransformChain Template flag to help deduce template type
  */
-template <typename In, typename Out = In, typename IsTransformChain = void>
+template <typename In, typename Out, typename IsTransformChain = void>
 struct Ifca;
 
+/**
+ * @brief Empty ifca
+ *
+ * @tparam InputType type of chunks passed to ifca
+ */
 template <typename InputType>
 class Ifca<InputType, InputType,
            std::enable_if_t<!is_transform_expression_v<InputType> &&
@@ -57,13 +62,13 @@ class Ifca<InputType, InputType,
 
   template <typename, typename, typename>
   friend class Ifca;
-
- private:
-  transforms_type transforms_;
 };
 
-///////////////////////////////
-
+/**
+ * @brief Ifca with single transform
+ *
+ * @tparam FirstTransform
+ */
 template <typename FirstTransform>
 class Ifca<FirstTransform, void,
            std::enable_if_t<is_transform_expression_v<FirstTransform>>>
@@ -75,25 +80,23 @@ class Ifca<FirstTransform, void,
   using input_type = typename FirstTransform::input_type;
   using output_type = typename FirstTransform::output_type;
   using base_type = IfcaMethods<Impl, input_type, output_type>;
-  using transforms_type = std::tuple<FirstTransform>;
+  using transforms_type = transform_chain_t<FirstTransform>;
 
-  // explicit Ifca(unsigned int max_parallel = maxParallel())
-  //     : base_type(max_parallel){};
+  explicit Ifca(FirstTransform&& firstTransform,
+                unsigned int max_parallel = maxParallel())
+      : base_type(max_parallel),
+        transforms_(transforms_type{std::move(firstTransform)}) {}
 
   template <typename CurrentIfca>
   explicit Ifca(CurrentIfca&& currentIfca, FirstTransform&& firstTransform)
       : base_type(std::move(currentIfca)),
         transforms_(transforms_type{std::move(firstTransform)}) {}
-  // transforms_(ForwardTransformChain<typename CurrentIfca::transforms_type,
-  //                                   FirstTransform>(
-  //     std::move(currentIfca.transforms_), std::move(nextTransform))) {}
 
   template <typename Chunk>
   void operator()(Chunk&& chunk,
                   std::future<void>&& previous_processing_future) {
-    auto&& onResolveCallback =
-        [&previous_processing_future, this](
-            decltype(std::forward<output_type>(chunk)) resolvedValue) -> void {
+    auto&& onResolveCallback = [&previous_processing_future,
+                                this](output_type resolvedValue) -> void {
       this->onResolve(FWD(resolvedValue),
                       std::move(previous_processing_future));
     };
@@ -110,8 +113,12 @@ class Ifca<FirstTransform, void,
   transforms_type transforms_;
 };
 
-///////////////////////////////
-
+/**
+ * @brief Ifca for transform chains
+ *
+ * @tparam CurrentIfca Ifca with transforms
+ * @tparam NextTransform Transform to attach at end of transforms chain
+ */
 template <typename CurrentIfca, typename NextTransform>
 class Ifca<CurrentIfca, NextTransform,
            std::enable_if_t<is_ifca_interface_v<CurrentIfca> &&
@@ -136,41 +143,35 @@ class Ifca<CurrentIfca, NextTransform,
   template <typename Chunk>
   void operator()(Chunk&& chunk,
                   std::future<void>&& previous_processing_future) {
-    runTransformsHelper(
+    runTransforms(
         FWD(chunk), std::move(previous_processing_future),
         std::make_index_sequence<std::tuple_size<transforms_type>{}>{});
   }
 
  protected:
   template <typename Chunk, std::size_t... Is>
-  void runTransformsHelper(Chunk&& chunk,
-                           std::future<void>&& previous_processing_future,
-                           std::index_sequence<Is...>) {
-    runTransforms(FWD(chunk), std::move(previous_processing_future),
-                  std::get<Is>(transforms_)...);
+  void runTransforms(Chunk&& chunk,
+                     std::future<void>&& previous_processing_future,
+                     std::index_sequence<Is...>) {
+    runTransformsImpl(FWD(chunk), std::move(previous_processing_future),
+                      std::get<Is>(transforms_)...);
   }
 
   template <typename Chunk, typename FirstTransform,
             typename... RestOfTransforms>
-  void runTransforms(Chunk&& chunk,
-                     std::future<void>&& previous_processing_future,
-                     FirstTransform&& firstTransform,
-                     RestOfTransforms&&... restOfTransforms) {
-    using namespace std::placeholders;
-
+  void runTransformsImpl(Chunk&& chunk,
+                         std::future<void>&& previous_processing_future,
+                         FirstTransform&& firstTransform,
+                         RestOfTransforms&&... restOfTransforms) {
     auto&& onResolveCallback =
         [&previous_processing_future, this](
             decltype(std::forward<output_type>(chunk)) resolvedValue) -> void {
       this->onResolve(FWD(resolvedValue),
                       std::move(previous_processing_future));
     };
-
-    // TODO: change to labmda
-    // auto&& onRejectCallback = std::bind(&Impl::onReject, this);
     auto&& onRejectCallback = [this] { this->onReject(); };
     firstTransform(FWD(chunk), FWD(onResolveCallback), FWD(onRejectCallback),
                    FWD(restOfTransforms)...);
-    // previous_processing_future.wait();
   }
 
   template <typename, typename, typename>

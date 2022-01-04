@@ -12,7 +12,7 @@ template <typename NextTransform = void, typename CurrentTransforms = void>
 struct transform_chain;
 
 /**
- * @brief Specialization for no transforms
+ * @brief Empty transform chain
  */
 template <>
 struct transform_chain<> {
@@ -20,7 +20,15 @@ struct transform_chain<> {
 };
 
 /**
- * @brief Specialization for chain of transforms
+ * @brief Single transform in chain
+ */
+template <typename FirstTransform>
+struct transform_chain<FirstTransform, void> {
+  using type = std::tuple<FirstTransform>;
+};
+
+/**
+ * @brief Multiple transforms in chain
  *
  * @tparam NextTransform New transform to attach to chain
  * @tparam CurrentTransforms
@@ -60,40 +68,6 @@ auto ForwardTransformChain(ExistingTransformChain&& existingTransformChain,
                            NewTransfrom&& newTransfrom) {
   return ForwardTransformChainImpl<ExistingTransformChain, NewTransfrom>(
       FWD(existingTransformChain), FWD(newTransfrom), Indices{});
-}
-
-template <typename TransformChain, size_t S>
-struct unfoldTransformsImpl {
-  template <typename Chunk>
-  auto operator()(TransformChain& transform, Chunk&& chunk) {
-    return std::get<S>(transform)(
-        unfoldTransformsImpl<TransformChain, S - 1>()(transform, FWD(chunk)));
-  }
-};
-
-template <typename TransformChain>
-struct unfoldTransformsImpl<TransformChain, 0> {
-  template <typename Chunk>
-  auto operator()(TransformChain& transform, Chunk&& chunk) {
-    return std::get<0>(transform)(FWD(chunk));
-  }
-};
-
-/**
- * @brief Helper method to unfold and run transform chain for given chunk.
- *
- * Unfolds chain of transforms i.e. for 3 transforms [T0, T1, T2] returns
- * T2(T1(T0(chunk)));
- *
- * @param transformChain transfom chain to unfold
- * @param chunk piece of data to run transforms on.
- * @return result of transformations of given chunk
- */
-template <typename TransformChain, typename Chunk>
-auto unfoldTransforms(TransformChain& transformChain, Chunk&& chunk) {
-  return unfoldTransformsImpl<TransformChain,
-                              std::tuple_size_v<TransformChain> - 1U>()(
-      transformChain, FWD(chunk));
 }
 
 #endif  // TRANSFORM_CHAIN_H

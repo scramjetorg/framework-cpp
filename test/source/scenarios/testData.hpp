@@ -83,11 +83,6 @@ struct TestData<TestClass, std::string> {
   using input = TestClass;
   using output = std::string;
 
-  TestData()
-      : v_test_class({TestClass("TestClass1"), TestClass("TestClass2"),
-                      TestClass("TestClass3"), TestClass("TestClass4"),
-                      TestClass("TestClass5"), TestClass("TestClass6")}) {}
-
   std::vector<TestClass> inputSequence() {
     return std::vector<TestClass>{
         TestClass("TestClass1"), TestClass("TestClass2"),
@@ -115,9 +110,6 @@ struct TestData<TestClass, std::string> {
     return std::vector<std::string>{"TestClass20", "TestClass40",
                                     "TestClass60"};
   }
-
- private:
-  std::vector<TestClass> v_test_class;
 };
 
 template <>
