@@ -2,7 +2,5 @@
 
 namespace ifca {
 
-TEST_CASE("Transform race") {
-//   SUBCASE("") { CHECK(true); }
-}
+TEST_CASE("Transform race") {}
 }  // namespace ifca

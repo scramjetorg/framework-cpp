@@ -37,8 +37,6 @@ bool DrainState::drainOccured() { return !future_is_ready(drained_sfuture_); }
 
 bool DrainState::drained() { return future_is_ready(drained_sfuture_); }
 
-drain_sfuture DrainState::get() { return drained_sfuture_; }
-
 DrainState::operator drain_sfuture() { return drained_sfuture_; }
 
 void DrainState::ChunkStartedProcessing() {
