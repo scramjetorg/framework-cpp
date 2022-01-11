@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "../testClass.hpp"
 #include "helpers/Logger/logger.hpp"
 #include "ifca/ifca.hpp"
 #include "ifca/isIfcaInterface.hpp"
@@ -69,6 +70,44 @@ TEST_CASE("Ifca implementation") {
     ifca.write(testEvenValue);
     auto&& res = ifca.read().get();
     CHECK_EQ(testOddValue + 1, res);
+  }
+
+  SUBCASE("Transform returning reference") {
+    using TestClass = test_utils::TestClass;
+    auto tc = TestClass("TestClass");
+    auto& tcRef = tc;
+    std::function<TestClass&(TestClass&)> passUnchanged =
+        [](TestClass& chunk) -> TestClass& { return chunk; };
+
+    SUBCASE("Empty ifca") {
+      auto ifca = Ifca<TestClass&>();
+      ifca.write(tcRef);
+      TestClass& result = ifca.read().get();
+      CHECK_EQ(tc.copy_count_, 0);
+      CHECK_EQ(&tcRef, &result);
+      CHECK_EQ(&tc, &result);
+    }
+
+    SUBCASE("Single transform ifca") {
+      auto ifca = Ifca(each(passUnchanged));
+      ifca.write(tcRef);
+      TestClass& result = ifca.read().get();
+
+      CHECK_EQ(tc.copy_count_, 0);
+      CHECK_EQ(&tcRef, &result);
+      CHECK_EQ(&tc, &result);
+    }
+
+    SUBCASE("Transforms chain ifca") {
+      auto ifca = Ifca(each(passUnchanged)) + each(passUnchanged);
+
+      ifca.write(tcRef);
+      TestClass& result = ifca.read().get();
+
+      CHECK_EQ(tc.copy_count_, 0);
+      CHECK_EQ(&tcRef, &result);
+      CHECK_EQ(&tc, &result);
+    }
   }
 }
 
