@@ -11,7 +11,9 @@ namespace test_utils {
  *
  */
 struct TestClass {
-  TestClass(std::string name = "") : name_(name) {}
+  TestClass(std::string name = "")
+      : name_(name), copy_count_(0), move_count_(0) {}
+
   TestClass(const TestClass& o)
       : name_(o.name_),
         copy_count_(o.copy_count_ + 1),
@@ -35,20 +37,17 @@ struct TestClass {
     move_count_ = o.move_count_ + 1;
     return *this;
   }
-  ~TestClass() {}
 
-  friend std::ostream& operator<<(std::ostream& os, const TestClass& tc);
+  friend std::ostream& operator<<(std::ostream& os, const TestClass& tc) {
+    os << tc.name_ << " copied: " << tc.copy_count_
+       << " moved: " << tc.move_count_ << "\n";
+    return os;
+  }
 
   std::string name_;
   int copy_count_;
   int move_count_;
 };
-
-std::ostream& operator<<(std::ostream& os, const TestClass& tc) {
-  os << tc.name_ << " copied: " << tc.copy_count_
-     << " moved: " << tc.move_count_ << "\n";
-  return os;
-}
 
 }  // namespace test_utils
 
