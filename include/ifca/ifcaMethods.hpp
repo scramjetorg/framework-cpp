@@ -111,6 +111,11 @@ class IfcaMethods {
     }
   }
 
+  template <typename Transform>
+  decltype(auto) addTransform(Transform&& transform) {
+    return std::move(derived()) + FWD(transform);
+  }
+
  protected:
   void setReadEnd(chunk_promise& promise) {
     try {

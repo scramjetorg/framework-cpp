@@ -5,6 +5,7 @@
 
 #include "../../testClass.hpp"
 #include "ifca/transform/each.hpp"
+#include "ifca/transform/isTransformExpression.hpp"
 
 namespace ifca {
 
@@ -22,10 +23,11 @@ TEST_CASE("EachTransform") {
   std::function<void(int)> resolvedFunc = [&result](int chunk) {
     result = chunk;
   };
-  auto each = Each(eachFunc);
+  auto eachTransform = each(eachFunc);
+  REQUIRE(is_transform_expression_v<decltype(eachTransform)>);
 
   SUBCASE("Chunk resolved") {
-    each(testValue, resolvedFunc, rejectedFunc);
+    eachTransform(testValue, resolvedFunc, rejectedFunc);
     CHECK(modified);
     CHECK_EQ(result, expectedResult);
   }
@@ -38,7 +40,7 @@ TEST_CASE("EachTransform") {
       nextPassed = true;
       resolve(chunk);
     };
-    each(testValue, resolvedFunc, rejectedFunc, nextTransform);
+    eachTransform(testValue, resolvedFunc, rejectedFunc, nextTransform);
     CHECK(nextPassed);
     CHECK(modified);
     CHECK_EQ(result, expectedResult);
@@ -57,10 +59,10 @@ TEST_CASE("EachTransform no implicit copies") {
     CHECK_EQ(chunk.copy_count_, 0);
   };
   auto rejectedFunc = [] {};
-  auto each = Each(eachFunc);
+  auto eachTransform = each(eachFunc);
 
   auto testValue = TestClass();
-  each(testValue, resolvedFunc, rejectedFunc);
+  eachTransform(testValue, resolvedFunc, rejectedFunc);
 }
 
 }  // namespace ifca

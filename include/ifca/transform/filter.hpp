@@ -107,7 +107,7 @@ class FilterTransform<
 };
 
 template <typename Predicate>
-auto Filter(Predicate& predicate) {
+auto filter(Predicate& predicate) {
   return FilterTransform<Predicate>(predicate);
 }
 

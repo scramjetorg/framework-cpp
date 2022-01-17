@@ -24,7 +24,7 @@ namespace ifca {
  * @tparam IsTransformChain Template flag to help deduce template type
  */
 template <typename In, typename Out, typename IsTransformChain = void>
-struct Ifca;
+struct IfcaImpl;
 
 /**
  * @brief Empty ifca
@@ -32,19 +32,19 @@ struct Ifca;
  * @tparam InputType type of chunks passed to ifca
  */
 template <typename InputType>
-class Ifca<InputType, InputType,
-           std::enable_if_t<!is_transform_expression_v<InputType> &&
-                            !is_ifca_interface_v<InputType> &&
-                            !std::is_void_v<InputType>>>
-    : public IfcaMethods<Ifca<InputType, InputType>, InputType, InputType> {
+class IfcaImpl<InputType, InputType,
+               std::enable_if_t<!is_transform_expression_v<InputType> &&
+                                !is_ifca_interface_v<InputType> &&
+                                !std::is_void_v<InputType>>>
+    : public IfcaMethods<IfcaImpl<InputType, InputType>, InputType, InputType> {
  public:
-  using Impl = Ifca<InputType, InputType>;
+  using Impl = IfcaImpl<InputType, InputType>;
   using input_type = InputType;
   using output_type = InputType;
   using base_type = IfcaMethods<Impl, input_type, output_type>;
   using transforms_type = transform_chain_t<>;
 
-  explicit Ifca(unsigned int max_parallel = maxParallel())
+  explicit IfcaImpl(unsigned int max_parallel = maxParallel())
       : base_type(max_parallel){};
 
   template <typename Chunk>
@@ -53,16 +53,30 @@ class Ifca<InputType, InputType,
     this->onResolve(FWD(chunk), std::move(previous_processing_future));
   }
 
-  template <typename NewTransform>
-  typename std::enable_if_t<is_transform_expression_v<NewTransform>,
-                            Ifca<NewTransform, void>>
-  operator+(NewTransform&& new_transform) {
-    return Ifca<NewTransform, void>(FWD(*this), FWD(new_transform));
+  template <typename Transform>
+  typename std::enable_if_t<is_transform_expression_v<Transform> &&
+                                !std::is_lvalue_reference_v<Transform>,
+                            IfcaImpl<Transform, void>>
+  operator+(Transform&& transform) {
+    return IfcaImpl<Transform, void>(FWD(*this), FWD(transform));
   }
 
   template <typename, typename, typename>
-  friend class Ifca;
+  friend class IfcaImpl;
 };
+
+/**
+ * @brief Helper function to create IfcaImpl
+ *
+ * @tparam Input
+ * @param max_parallel
+ * @return IfcaImpl<Input, Input, void>
+ */
+template <typename Input>
+inline IfcaImpl<Input, Input, void> Ifca(
+    unsigned int max_parallel = maxParallel()) {
+  return IfcaImpl<Input, Input, void>(max_parallel);
+}
 
 /**
  * @brief Ifca with single transform
@@ -70,25 +84,25 @@ class Ifca<InputType, InputType,
  * @tparam FirstTransform
  */
 template <typename FirstTransform>
-class Ifca<FirstTransform, void,
-           std::enable_if_t<is_transform_expression_v<FirstTransform>>>
-    : public IfcaMethods<Ifca<FirstTransform, void>,
+class IfcaImpl<FirstTransform, void,
+               std::enable_if_t<is_transform_expression_v<FirstTransform>>>
+    : public IfcaMethods<IfcaImpl<FirstTransform, void>,
                          typename FirstTransform::input_type,
                          typename FirstTransform::output_type> {
  public:
-  using Impl = Ifca<FirstTransform, void>;
+  using Impl = IfcaImpl<FirstTransform, void>;
   using input_type = typename FirstTransform::input_type;
   using output_type = typename FirstTransform::output_type;
   using base_type = IfcaMethods<Impl, input_type, output_type>;
   using transforms_type = transform_chain_t<FirstTransform>;
 
-  explicit Ifca(FirstTransform&& firstTransform,
-                unsigned int max_parallel = maxParallel())
+  explicit IfcaImpl(FirstTransform&& firstTransform,
+                    unsigned int max_parallel = maxParallel())
       : base_type(max_parallel),
         transforms_(transforms_type{std::move(firstTransform)}) {}
 
   template <typename CurrentIfca>
-  explicit Ifca(CurrentIfca&& currentIfca, FirstTransform&& firstTransform)
+  explicit IfcaImpl(CurrentIfca&& currentIfca, FirstTransform&& firstTransform)
       : base_type(std::move(currentIfca)),
         transforms_(transforms_type{std::move(firstTransform)}) {}
 
@@ -107,11 +121,26 @@ class Ifca<FirstTransform, void,
   }
 
   template <typename, typename, typename>
-  friend class Ifca;
+  friend class IfcaImpl;
 
  private:
   transforms_type transforms_;
 };
+
+/**
+ * @brief Helper function to create IfcaImpl
+ *
+ * @tparam Transform
+ * @param transform
+ * @param max_parallel
+ * @return IfcaImpl<Transform, void, void>>
+ */
+template <typename Transform>
+inline typename std::enable_if_t<!std::is_lvalue_reference_v<Transform>,
+                                 IfcaImpl<Transform, void, void>>
+Ifca(Transform&& transform, unsigned int max_parallel = maxParallel()) {
+  return IfcaImpl<Transform, void, void>(std::move(transform), max_parallel);
+}
 
 /**
  * @brief Ifca for transform chains
@@ -120,21 +149,21 @@ class Ifca<FirstTransform, void,
  * @tparam NextTransform Transform to attach at end of transforms chain
  */
 template <typename CurrentIfca, typename NextTransform>
-class Ifca<CurrentIfca, NextTransform,
-           std::enable_if_t<is_ifca_interface_v<CurrentIfca> &&
-                            is_transform_expression_v<NextTransform>>>
-    : public IfcaMethods<Ifca<CurrentIfca, NextTransform>,
+class IfcaImpl<CurrentIfca, NextTransform,
+               std::enable_if_t<is_ifca_interface_v<CurrentIfca> &&
+                                is_transform_expression_v<NextTransform>>>
+    : public IfcaMethods<IfcaImpl<CurrentIfca, NextTransform>,
                          typename CurrentIfca::input_type,
                          typename NextTransform::output_type> {
  public:
-  using Impl = Ifca<CurrentIfca, NextTransform>;
+  using Impl = IfcaImpl<CurrentIfca, NextTransform>;
   using input_type = typename CurrentIfca::input_type;
   using output_type = typename NextTransform::output_type;
   using base_type = IfcaMethods<Impl, input_type, output_type>;
   using transforms_type =
       transform_chain_t<NextTransform, typename CurrentIfca::transforms_type>;
 
-  explicit Ifca(CurrentIfca&& currentIfca, NextTransform&& nextTransform)
+  explicit IfcaImpl(CurrentIfca&& currentIfca, NextTransform&& nextTransform)
       : base_type(std::move(currentIfca)),
         transforms_(ForwardTransformChain<typename CurrentIfca::transforms_type,
                                           NextTransform>(
@@ -175,21 +204,22 @@ class Ifca<CurrentIfca, NextTransform,
   }
 
   template <typename, typename, typename>
-  friend class Ifca;
+  friend class IfcaImpl;
 
  private:
   transforms_type transforms_;
 };
 
-template <typename CurrentIfca, typename NewTransform>
-typename std::enable_if_t<
-    is_ifca_interface_v<CurrentIfca> &&
-        is_transform_expression_v<NewTransform> &&
+template <typename CurrentIfca, typename Transform>
+inline typename std::enable_if_t<
+    is_ifca_interface_v<CurrentIfca> && is_transform_expression_v<Transform> &&
         !std::is_same_v<typename CurrentIfca::transforms_type,
-                        transform_chain_t<>>,
-    Ifca<CurrentIfca, NewTransform>>
-operator+(CurrentIfca&& current_ifca, NewTransform&& new_transform) {
-  return Ifca<CurrentIfca, NewTransform>(FWD(current_ifca), FWD(new_transform));
+                        transform_chain_t<>> &&
+        !std::is_lvalue_reference_v<Transform>,
+    IfcaImpl<CurrentIfca, Transform>>
+operator+(CurrentIfca&& current_ifca, Transform&& new_transform) {
+  return IfcaImpl<CurrentIfca, Transform>(FWD(current_ifca),
+                                          FWD(new_transform));
 }
 
 }  // namespace ifca

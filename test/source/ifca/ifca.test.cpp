@@ -1,10 +1,9 @@
-#include "ifca/ifca.hpp"
-
 #include <doctest/doctest.h>
 
 #include <functional>
 
 #include "helpers/Logger/logger.hpp"
+#include "ifca/ifca.hpp"
 #include "ifca/isIfcaInterface.hpp"
 #include "ifca/transform/each.hpp"
 #include "ifca/transform/filter.hpp"
@@ -21,47 +20,50 @@ TEST_CASE("Ifca implementation") {
     return chunk + 1;
   };
 
-  Ifca<int, int> emptyIfca;
-  using EmptyIfca_type = Ifca<int, int>;
-  REQUIRE(is_ifca_interface_v<EmptyIfca_type>);
-  auto T1 = Each(incrementByOne);
-  using T_type = decltype(Each(incrementByOne));
-  REQUIRE(is_transform_expression_v<T_type>);
-
   int testOddValue = 11;
-  int testEvenValue = 12;
+  int testEvenValue = 14;
 
   SUBCASE("Empty Ifca") {
-    emptyIfca.write(testOddValue);
-    auto&& res = emptyIfca.read().get();
+    auto ifca = Ifca<int>();
+    REQUIRE(is_ifca_interface_v<decltype(ifca)>);
+
+    ifca.write(testOddValue);
+    auto&& res = ifca.read().get();
     CHECK_EQ(testOddValue, res);
   }
 
-  SUBCASE("Empty Ifca sum") {
-    auto emptyIfcaSum = Ifca<int, int>() + Each(incrementByOne);
-    emptyIfcaSum.write(testOddValue);
-    auto&& res = emptyIfcaSum.read().get();
+  SUBCASE("Empty Ifca- adding transform") {
+    auto ifca = Ifca<int>().addTransform(each(incrementByOne));
+    ifca.write(testOddValue);
+    auto&& res = ifca.read().get();
     CHECK_EQ(testOddValue + 1, res);
   }
 
-  SUBCASE("Single Ifca") {
-    auto singleIfca = Ifca<T_type, void>(std::move(T1));
-    singleIfca.write(testOddValue);
-    auto&& res = singleIfca.read().get();
+  SUBCASE("Ifca with single transform") {
+    auto ifca = Ifca(each(incrementByOne));
+    ifca.write(testOddValue);
+    auto&& res = ifca.read().get();
     CHECK_EQ(testOddValue + 1, res);
   }
 
-  SUBCASE("Single Ifca sum") {
-    auto singleIfca = Ifca<T_type, void>(std::move(T1));
-    auto ifca = std::move(singleIfca) + Each(incrementByOne);
+  SUBCASE("Adding transform to ifca with single transform") {
+    auto ifca = Ifca(each(incrementByOne)).addTransform(each(incrementByOne));
     ifca.write(testOddValue);
     auto&& res = ifca.read().get();
     CHECK_EQ(testOddValue + 2, res);
   }
 
+  SUBCASE("Adding transform to ifca chain") {
+    auto ifca = Ifca(each(incrementByOne))
+                    .addTransform(each(incrementByOne))
+                    .addTransform(each(incrementByOne));
+    ifca.write(testOddValue);
+    auto&& res = ifca.read().get();
+    CHECK_EQ(testOddValue + 3, res);
+  }
+
   SUBCASE("Ifca filter") {
-    auto ifca =
-        Ifca<decltype(Filter(onlyOdd)), void>(Filter(onlyOdd)) + std::move(T1);
+    auto ifca = Ifca(filter(onlyOdd)).addTransform(each(incrementByOne));
 
     ifca.write(testOddValue);
     ifca.write(testEvenValue);

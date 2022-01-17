@@ -20,16 +20,16 @@ TEST_CASE("FilterTransform") {
       resolved = true;
     };
 
-    auto filter = Filter(filterFunc);
+    auto filterTransform = filter(filterFunc);
 
     SUBCASE("Chunk resolved") {
-      filter(0, resolvedFunc, rejectedFunc);
+      filterTransform(0, resolvedFunc, rejectedFunc);
       CHECK_FALSE(rejected);
       CHECK(resolved);
     }
 
     SUBCASE("Chunk rejected") {
-      filter(1, resolvedFunc, rejectedFunc);
+      filterTransform(1, resolvedFunc, rejectedFunc);
       CHECK(rejected);
       CHECK_FALSE(resolved);
     }
@@ -43,7 +43,7 @@ TEST_CASE("FilterTransform") {
         resolve(chunk);
       };
 
-      filter(0, resolvedFunc, rejectedFunc, nextTransform);
+      filterTransform(0, resolvedFunc, rejectedFunc, nextTransform);
       CHECK_FALSE(rejected);
       CHECK(nextPassed);
       CHECK(resolved);
@@ -119,11 +119,11 @@ TEST_CASE("FilterTransform no implicit copies") {
   auto rejectedFunc = [] {};
   auto testValue = TestClass();
 
-  auto filterAll = Filter(filterPassAll);
+  auto filterAll = filter(filterPassAll);
   filterAll(testValue, resolvedFunc, rejectedFunc);
   CHECK_EQ(testValue.copy_count_, 0);
 
-  auto filterNone = Filter(filterPassNone);
+  auto filterNone = filter(filterPassNone);
   filterNone(testValue, resolvedFunc, rejectedFunc);
   CHECK_EQ(testValue.copy_count_, 0);
 }
