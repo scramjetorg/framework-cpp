@@ -7,6 +7,14 @@
 namespace test_utils {
 
 /**
+ * @brief Simple free function for testing
+ *
+ * @param chunk
+ * @return int
+ */
+inline int freeFunction(int chunk) { return chunk + 1; }
+
+/**
  * @brief Simple test class allowing to count implicit copy and moves of object.
  *
  */
