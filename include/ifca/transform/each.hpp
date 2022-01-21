@@ -39,7 +39,7 @@ class EachTransform
 };
 
 template <typename Function>
-auto each(Function& function) {
+auto each(Function&& function) {
   return EachTransform<Function>(function);
 }
 

@@ -74,7 +74,7 @@ TEST_CASE_TEMPLATE("IFCA- Basic tests", TestData, TestTypes) {
         std::max_element(testSequence.begin(), testSequence.end());
     int minExpectedTime = timeResolution * (*minExpectedTimeIt);
 
-    std::function<int(int)> delayFunc = [](int chunk) {
+    auto delayFunc = [](int chunk) {
       test_utils::Timer::waitFor(std::chrono::milliseconds(chunk * 10));
       return chunk;
     };
@@ -104,7 +104,7 @@ TEST_CASE("IFCA- Ordering tests") {
   using out = in;
   auto dataset1 = std::vector<in>{0, 1, 0, 1, 0, 1};
   auto dataset2 = std::vector<in>{1, 3, 2, 6, 4, 5};
-  std::function<out(in)> delayFunc = [](in delay) {
+  auto delayFunc = [](in delay) {
     test_utils::Timer::waitFor(std::chrono::milliseconds(delay * 10));
     return delay;
   };
@@ -187,7 +187,7 @@ TEST_CASE("IFCA- Filtering tests") {
   using in = int;
   auto dataset1 = std::vector<in>{0, 1, 0, 1, 0, 1};
   auto expectedResults = std::vector<in>(dataset1.size(), 0);
-  std::function<bool(in)> filterFunc = [](in chunk) { return !(chunk % 2); };
+  auto filterFunc = [](in chunk) { return !(chunk % 2); };
 
   SUBCASE("Support for dropping chunks") {
     auto ifca = Ifca(filter(filterFunc), kMaxParallel);
@@ -217,10 +217,10 @@ TEST_CASE("IFCA- Filtering tests") {
   }
 
   SUBCASE("Dropping chunks in the middle of chain") {
-    std::function<bool(in)> filterAll = [](in) { return false; };
+    auto filterAll = [](in) { return false; };
     bool secondFuncCalled = false;
     std::mutex m;
-    std::function<bool(in)> checkCall = [&m, &secondFuncCalled](in) {
+    auto checkCall = [&m, &secondFuncCalled](in) {
       std::lock_guard<std::mutex> lock(m);
       secondFuncCalled = true;
       return true;

@@ -10,17 +10,13 @@ namespace ifca {
 TEST_CASE("FilterTransform") {
   auto resolved = false;
   auto rejected = false;
-  std::function<void()> rejectedFunc = [&rejected]() { rejected = true; };
+  auto rejectedFunc = [&rejected]() { rejected = true; };
 
   SUBCASE("Without deleter") {
-    std::function<bool(int)> filterFunc = [](int chunk) {
-      return !(chunk % 2);
-    };
-    std::function<void(int)> resolvedFunc = [&resolved](int) {
-      resolved = true;
-    };
+    auto passEven = [](int chunk) { return !(chunk % 2); };
+    auto resolvedFunc = [&resolved](int) { resolved = true; };
 
-    auto filterTransform = filter(filterFunc);
+    auto filterTransform = filter(passEven);
 
     SUBCASE("Chunk resolved") {
       filterTransform(0, resolvedFunc, rejectedFunc);
@@ -51,24 +47,25 @@ TEST_CASE("FilterTransform") {
   }
 
   SUBCASE("With deleter") {
-    std::function<bool(test_utils::TestClass*)> filterFunc =
-        [](test_utils::TestClass* chunk) { return (chunk->name_ == ""); };
+    auto passEmptyName = [](test_utils::TestClass* chunk) {
+      return (chunk->name_ == "");
+    };
 
-    std::function<void(test_utils::TestClass*)> resolvedFunc =
-        [&resolved](test_utils::TestClass*) { resolved = true; };
+    auto resolvedFunc = [&resolved](test_utils::TestClass*) {
+      resolved = true;
+    };
 
     auto deleted = false;
-    std::function<void(test_utils::TestClass*)> deleterFunc =
-        [&deleted](test_utils::TestClass* chunk) {
-          deleted = true;
-          delete chunk;
-        };
+    auto deleterFunc = [&deleted](test_utils::TestClass* chunk) {
+      deleted = true;
+      delete chunk;
+    };
 
-    auto filter = Filter(filterFunc, deleterFunc);
+    auto filterTransform = filter(passEmptyName, deleterFunc);
 
     SUBCASE("Chunk resolved") {
       test_utils::TestClass* tcPass = new test_utils::TestClass();
-      filter(tcPass, resolvedFunc, rejectedFunc);
+      filterTransform(tcPass, resolvedFunc, rejectedFunc);
       CHECK_FALSE(rejected);
       CHECK(resolved);
       delete tcPass;
@@ -76,7 +73,7 @@ TEST_CASE("FilterTransform") {
 
     SUBCASE("Chunk rejected") {
       test_utils::TestClass* tcReject = new test_utils::TestClass("reject");
-      filter(tcReject, resolvedFunc, rejectedFunc);
+      filterTransform(tcReject, resolvedFunc, rejectedFunc);
       CHECK(rejected);
       CHECK_FALSE(resolved);
       CHECK(deleted);
@@ -91,7 +88,7 @@ TEST_CASE("FilterTransform") {
         nextPassed = true;
         resolve(chunk);
       };
-      filter(tcPass, resolvedFunc, rejectedFunc, nextTransform);
+      filterTransform(tcPass, resolvedFunc, rejectedFunc, nextTransform);
       CHECK_FALSE(rejected);
       CHECK(nextPassed);
       CHECK(resolved);
@@ -103,19 +100,16 @@ TEST_CASE("FilterTransform") {
 TEST_CASE("FilterTransform no implicit copies") {
   using TestClass = test_utils::TestClass;
 
-  std::function<bool(TestClass&)> filterPassAll = [](TestClass& chunk) -> bool {
+  auto filterPassAll = [](TestClass& chunk) -> bool {
     CHECK_EQ(chunk.copy_count_, 0);
     return true;
   };
-  std::function<bool(TestClass&)> filterPassNone =
-      [](TestClass& chunk) -> bool {
+  auto filterPassNone = [](TestClass& chunk) -> bool {
     CHECK_EQ(chunk.copy_count_, 0);
     return false;
   };
 
-  std::function<void(TestClass&)> resolvedFunc = [](TestClass& chunk) {
-    CHECK_EQ(chunk.copy_count_, 0);
-  };
+  auto resolvedFunc = [](TestClass& chunk) { CHECK_EQ(chunk.copy_count_, 0); };
   auto rejectedFunc = [] {};
   auto testValue = TestClass();
 

@@ -1,6 +1,8 @@
 #ifndef FILTER_H
 #define FILTER_H
 
+#include <type_traits>
+
 #include "helpers/FWD.hpp"
 #include "helpers/Logger/logger.hpp"
 #include "helpers/functionTraits.hpp"
@@ -27,7 +29,6 @@ class FilterTransform<
   using input_type = typename function_traits<Predicate>::template arg<0>;
   using output_type = typename function_traits<Predicate>::template arg<0>;
 
-  // TODO: add forwarding
   explicit FilterTransform(Predicate& predicate, Deleter& deleter)
       : predicate_(predicate), deleter_(deleter){};
 
@@ -61,7 +62,7 @@ class FilterTransform<
 };
 
 template <typename Predicate, typename Deleter>
-auto Filter(Predicate& predicate, Deleter deleter) {
+auto filter(Predicate&& predicate, Deleter&& deleter) {
   return FilterTransform<Predicate, Deleter>(predicate, deleter);
 }
 
@@ -77,7 +78,6 @@ class FilterTransform<
   using input_type = typename function_traits<Predicate>::template arg<0>;
   using output_type = typename function_traits<Predicate>::template arg<0>;
 
-  // TODO: add forwarding
   explicit FilterTransform(Predicate& predicate) : predicate_(predicate){};
 
   template <typename Chunk, typename ResolveCallback, typename RejectCallback,
@@ -107,7 +107,7 @@ class FilterTransform<
 };
 
 template <typename Predicate>
-auto filter(Predicate& predicate) {
+auto filter(Predicate&& predicate) {
   return FilterTransform<Predicate>(predicate);
 }
 
