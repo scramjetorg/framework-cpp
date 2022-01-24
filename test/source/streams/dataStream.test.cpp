@@ -1,6 +1,6 @@
-#include "streams/dataStream.hpp"
-
 #include <doctest/doctest.h>
+
+#include "streams/dataStream.hpp"
 
 // #include <functional>
 

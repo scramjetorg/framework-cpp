@@ -1,225 +1,187 @@
 #ifndef IFCA_H
 #define IFCA_H
 
+#include <tuple>
 #include <type_traits>
 
 #include "helpers/FWD.hpp"
 #include "helpers/Logger/logger.hpp"
-#include "ifca/ifcaMethods.hpp"
+#include "helpers/asyncForwarder.hpp"
+#include "helpers/threadList.hpp"
+#include "ifca/drain.hpp"
+#include "ifca/exceptions.hpp"
 #include "ifca/isIfcaInterface.hpp"
 #include "ifca/maxParallel.hpp"
 #include "ifca/transform/isTransformExpression.hpp"
-#include "ifca/transform/transformExpression.hpp"
+#include "ifca/types.hpp"
 #include "transformChain.hpp"
-#include "types.hpp"
 
-// TODO: Lock methods returning void type if not final
 namespace ifca {
 
-/**
- * @brief Base Ifca template
- *
- * @tparam In Begining of transforms of Ifca
- * @tparam Out Last transform in Ifca
- * @tparam IsTransformChain Template flag to help deduce template type
- */
-template <typename In, typename Out, typename IsTransformChain = void>
-struct IfcaImpl;
-
-/**
- * @brief Empty ifca
- *
- * @tparam InputType type of chunks passed to ifca
- */
-template <typename InputType>
-class IfcaImpl<InputType, InputType,
-               std::enable_if_t<!is_transform_expression_v<InputType> &&
-                                !is_ifca_interface_v<InputType> &&
-                                !std::is_void_v<InputType>>>
-    : public IfcaMethods<IfcaImpl<InputType, InputType>, InputType, InputType> {
+template <typename In, typename Out, typename... TransformChain>
+class IfcaImpl {
  public:
-  using Impl = IfcaImpl<InputType, InputType>;
-  using input_type = InputType;
-  using output_type = InputType;
-  using base_type = IfcaMethods<Impl, input_type, output_type>;
-  using transforms_type = transform_chain_t<>;
+  using input_type = In;
+  using output_type = Out;
+  using transforms_type = std::tuple<TransformChain...>;
+
+  using chunk_promise = typename std::promise<output_type>;
+  using chunk_future = typename std::future<output_type>;
 
   explicit IfcaImpl(unsigned int max_parallel = maxParallel())
-      : base_type(max_parallel){};
+      : drain_state_(max_parallel), ended_(false) {
+    std::promise<void> first_processing_promise;
+    first_processing_promise.set_value();
+    last_processing_future_ = first_processing_promise.get_future();
+  };
 
-  template <typename Chunk>
-  void operator()(Chunk&& chunk,
-                  std::future<void>&& previous_processing_future) {
-    this->onResolve(FWD(chunk), std::move(previous_processing_future));
+  ~IfcaImpl() {
+    if (!ended_) end();
+    if (!last_processing_future_.valid()) return;
+    last_processing_future_.wait();
+  };
+
+  template <typename Input = input_type>
+  std::enable_if_t<!std::is_void_v<Input>, drain_sfuture> write(Input&& chunk) {
+    if (ended_) throw WriteAfterEnd();
+
+    // TODO: check how much is processing then create
+    if (read_ahead_promises_.empty()) {
+      auto& promise = processing_promises_.emplace_back(chunk_promise());
+      read_futures_.emplace_back(promise.get_future());
+    } else {
+      auto read_ahead_promise = std::move(read_ahead_promises_.front());
+      read_ahead_promises_.pop_front();
+      processing_promises_.push_back(std::move(read_ahead_promise));
+    }
+
+    drain_state_.ChunkStartedProcessing();
+    last_processing_future_ = std::async(
+        std::launch::async,
+        [this](Input&& chunk, std::future<void>&& previous_processing_future) {
+          if constexpr ((std::tuple_size_v<transforms_type>) > 0) {
+            runTransforms(
+                FWD(chunk), previous_processing_future,
+                std::make_index_sequence<std::tuple_size<transforms_type>{}>{});
+          } else {
+            onResolve(FWD(chunk), previous_processing_future);
+          }
+        },
+        async_forwarder<Input>(chunk), std::move(last_processing_future_));
+
+    return drain_state_;
   }
 
-  template <typename Transform>
-  typename std::enable_if_t<is_transform_expression_v<Transform> &&
-                                !std::is_lvalue_reference_v<Transform>,
-                            IfcaImpl<Transform, void>>
-  operator+(Transform&& transform) {
-    return IfcaImpl<Transform, void>(FWD(*this), FWD(transform));
+  template <typename Input = input_type>
+  std::enable_if_t<!std::is_void_v<Input>, chunk_future> read() {
+    drain_state_.ChunkRead();
+    if (read_futures_.empty()) {
+      if (ended_) {
+        auto end_promise = chunk_promise();
+        setReadEnd(end_promise);
+        return end_promise.get_future();
+      }
+      auto& read_ahead_promise =
+          read_ahead_promises_.emplace_back(chunk_promise());
+      return read_ahead_promise.get_future();
+    }
+    auto read = std::move(read_futures_.front());
+    read_futures_.pop_front();
+
+    return read;
   }
 
-  template <typename, typename, typename>
+  template <typename Transform, typename Enable = std::enable_if_t<
+                                    is_transform_expression_v<Transform>>>
+  auto addTransform(Transform&& transform) {
+    if constexpr ((std::tuple_size_v<transforms_type>) > 0)
+      return IfcaImpl<input_type, typename Transform::output_type,
+                      TransformChain..., Transform>(std::move(*this),
+                                                    FWD(transform));
+    else
+      return IfcaImpl<typename Transform::input_type,
+                      typename Transform::output_type, TransformChain...,
+                      Transform>(std::move(*this), FWD(transform));
+  }
+
+  void end() {
+    if (ended_) throw MultipleEnd();
+    ended_ = true;
+    for (auto&& read_ahead : read_ahead_promises_) {
+      setReadEnd(read_ahead);
+    }
+  }
+
+  template <typename, typename, typename...>
   friend class IfcaImpl;
-};
-
-/**
- * @brief Helper function to create IfcaImpl
- *
- * @tparam Input
- * @param max_parallel
- * @return IfcaImpl<Input, Input, void>
- */
-template <typename Input>
-inline IfcaImpl<Input, Input, void> Ifca(
-    unsigned int max_parallel = maxParallel()) {
-  return IfcaImpl<Input, Input, void>(max_parallel);
-}
-
-/**
- * @brief Ifca with single transform
- *
- * @tparam FirstTransform
- */
-template <typename FirstTransform>
-class IfcaImpl<FirstTransform, void,
-               std::enable_if_t<is_transform_expression_v<FirstTransform>>>
-    : public IfcaMethods<IfcaImpl<FirstTransform, void>,
-                         typename FirstTransform::input_type,
-                         typename FirstTransform::output_type> {
- public:
-  using Impl = IfcaImpl<FirstTransform, void>;
-  using input_type = typename FirstTransform::input_type;
-  using output_type = typename FirstTransform::output_type;
-  using base_type = IfcaMethods<Impl, input_type, output_type>;
-  using transforms_type = transform_chain_t<FirstTransform>;
-
-  explicit IfcaImpl(FirstTransform&& firstTransform,
-                    unsigned int max_parallel = maxParallel())
-      : base_type(max_parallel),
-        transforms_(transforms_type{std::move(firstTransform)}) {}
-
-  template <typename CurrentIfca>
-  explicit IfcaImpl(CurrentIfca&& currentIfca, FirstTransform&& firstTransform)
-      : base_type(std::move(currentIfca)),
-        transforms_(transforms_type{std::move(firstTransform)}) {}
-
-  template <typename Chunk>
-  void operator()(Chunk&& chunk,
-                  std::future<void>&& previous_processing_future) {
-    auto&& onResolveCallback = [&previous_processing_future,
-                                this](output_type resolvedValue) -> void {
-      this->onResolve(FWD(resolvedValue),
-                      std::move(previous_processing_future));
-    };
-
-    auto&& onRejectCallback = [this] { this->onReject(); };
-    std::get<0>(transforms_)(FWD(chunk), FWD(onResolveCallback),
-                             FWD(onRejectCallback));
-  }
-
-  template <typename, typename, typename>
-  friend class IfcaImpl;
-
- private:
-  transforms_type transforms_;
-};
-
-/**
- * @brief Helper function to create IfcaImpl
- *
- * @tparam Transform
- * @param transform
- * @param max_parallel
- * @return IfcaImpl<Transform, void, void>>
- */
-template <typename Transform>
-inline typename std::enable_if_t<!std::is_lvalue_reference_v<Transform>,
-                                 IfcaImpl<Transform, void, void>>
-Ifca(Transform&& transform, unsigned int max_parallel = maxParallel()) {
-  return IfcaImpl<Transform, void, void>(std::move(transform), max_parallel);
-}
-
-/**
- * @brief Ifca for transform chains
- *
- * @tparam CurrentIfca Ifca with transforms
- * @tparam NextTransform Transform to attach at end of transforms chain
- */
-template <typename CurrentIfca, typename NextTransform>
-class IfcaImpl<CurrentIfca, NextTransform,
-               std::enable_if_t<is_ifca_interface_v<CurrentIfca> &&
-                                is_transform_expression_v<NextTransform>>>
-    : public IfcaMethods<IfcaImpl<CurrentIfca, NextTransform>,
-                         typename CurrentIfca::input_type,
-                         typename NextTransform::output_type> {
- public:
-  using Impl = IfcaImpl<CurrentIfca, NextTransform>;
-  using input_type = typename CurrentIfca::input_type;
-  using output_type = typename NextTransform::output_type;
-  using base_type = IfcaMethods<Impl, input_type, output_type>;
-  using transforms_type =
-      transform_chain_t<NextTransform, typename CurrentIfca::transforms_type>;
-
-  explicit IfcaImpl(CurrentIfca&& currentIfca, NextTransform&& nextTransform)
-      : base_type(std::move(currentIfca)),
-        transforms_(ForwardTransformChain<typename CurrentIfca::transforms_type,
-                                          NextTransform>(
-            std::move(currentIfca.transforms_), std::move(nextTransform))){};
-
-  template <typename Chunk>
-  void operator()(Chunk&& chunk,
-                  std::future<void>&& previous_processing_future) {
-    runTransforms(
-        FWD(chunk), std::move(previous_processing_future),
-        std::make_index_sequence<std::tuple_size<transforms_type>{}>{});
-  }
 
  protected:
+  template <typename Ifca, typename Transform>
+  explicit IfcaImpl(Ifca&& ifca, Transform&& transform)
+      : transforms_(detail::ForwardTransformChain(FWD(ifca.transforms_),
+                                                  FWD(transform))),
+        drain_state_(FWD(ifca.drain_state_)),
+        last_processing_future_(FWD(ifca.last_processing_future_)),
+        ended_(FWD(ifca.ended_)) {}
+
+  void setReadEnd(chunk_promise& promise) {
+    try {
+      throw ReadEnd();
+    } catch (const ReadEnd&) {
+      promise.set_exception(std::current_exception());
+    }
+  }
+
   template <typename Chunk, std::size_t... Is>
   void runTransforms(Chunk&& chunk,
-                     std::future<void>&& previous_processing_future,
+                     std::future<void>& previous_processing_future,
                      std::index_sequence<Is...>) {
-    runTransformsImpl(FWD(chunk), std::move(previous_processing_future),
+    runTransformsImpl(FWD(chunk), previous_processing_future,
                       std::get<Is>(transforms_)...);
   }
 
   template <typename Chunk, typename FirstTransform,
             typename... RestOfTransforms>
   void runTransformsImpl(Chunk&& chunk,
-                         std::future<void>&& previous_processing_future,
+                         std::future<void>& previous_processing_future,
                          FirstTransform&& firstTransform,
                          RestOfTransforms&&... restOfTransforms) {
-    auto&& onResolveCallback =
-        [&previous_processing_future, this](
-            decltype(std::forward<output_type>(chunk)) resolvedValue) -> void {
-      this->onResolve(FWD(resolvedValue),
-                      std::move(previous_processing_future));
+    auto&& onResolveCallback = [&previous_processing_future, this](decltype(
+                                   std::forward<Out>(chunk)) resolvedValue) {
+      onResolve(FWD(resolvedValue), previous_processing_future);
     };
-    auto&& onRejectCallback = [this] { this->onReject(); };
+    auto&& onRejectCallback = [this] { onReject(); };
     firstTransform(FWD(chunk), FWD(onResolveCallback), FWD(onRejectCallback),
                    FWD(restOfTransforms)...);
   }
 
-  template <typename, typename, typename>
-  friend class IfcaImpl;
+  template <typename Chunk>
+  void onResolve(Chunk&& chunk, std::future<void>& previous_processing_future) {
+    previous_processing_future.wait();
+    auto&& result_promise = processing_promises_.take_front();
+    result_promise.set_value(FWD(chunk));
+    drain_state_.ChunkFinishedProcessing();
+  }
+
+  void onReject() {
+    // TODO: remove one of processing_promises_?
+    drain_state_.ChunkFinishedProcessing();
+  }
 
  private:
   transforms_type transforms_;
+
+  DrainState drain_state_;
+  std::future<void> last_processing_future_;
+  bool ended_;
+  ThreadList<chunk_promise> processing_promises_;
+  std::list<chunk_promise> read_ahead_promises_;
+  std::list<chunk_future> read_futures_;
 };
 
-template <typename CurrentIfca, typename Transform>
-inline typename std::enable_if_t<
-    is_ifca_interface_v<CurrentIfca> && is_transform_expression_v<Transform> &&
-        !std::is_same_v<typename CurrentIfca::transforms_type,
-                        transform_chain_t<>> &&
-        !std::is_lvalue_reference_v<Transform>,
-    IfcaImpl<CurrentIfca, Transform>>
-operator+(CurrentIfca&& current_ifca, Transform&& new_transform) {
-  return IfcaImpl<CurrentIfca, Transform>(FWD(current_ifca),
-                                          FWD(new_transform));
+template <typename Input = void, typename Output = Input>
+inline auto Ifca(unsigned int max_parallel = maxParallel()) {
+  return IfcaImpl<Input, Input>(max_parallel);
 }
 
 }  // namespace ifca

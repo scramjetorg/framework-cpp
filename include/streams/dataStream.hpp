@@ -12,7 +12,6 @@ namespace stream {
 template <typename In = void, typename Out = void, typename... Transforms>
 class DataStreamImpl {
  public:
-  
   virtual ~DataStreamImpl(){};
 
   template <typename Input>
