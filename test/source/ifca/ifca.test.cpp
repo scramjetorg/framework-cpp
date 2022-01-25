@@ -26,7 +26,7 @@ TEST_CASE("Ifca implementation") {
 
   SUBCASE("Empty Ifca") {
     auto ifca = Ifca<int>();
-    // REQUIRE(is_ifca_interface_v<decltype(ifca)>);
+    REQUIRE(is_ifca_interface_v<decltype(ifca)>);
 
     ifca.write(testOddValue);
     auto&& res = ifca.read().get();
@@ -35,7 +35,7 @@ TEST_CASE("Ifca implementation") {
 
   SUBCASE("Ifca- adding transform") {
     auto ifca = Ifca().addTransform(each(incrementByOne));
-    // REQUIRE(is_ifca_interface_v<decltype(ifca)>);
+    REQUIRE(is_ifca_interface_v<decltype(ifca)>);
     ifca.write(testOddValue);
     auto&& res = ifca.read().get();
     CHECK_EQ(testOddValue + 1, res);

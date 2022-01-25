@@ -10,7 +10,6 @@
 #include "helpers/threadList.hpp"
 #include "ifca/drain.hpp"
 #include "ifca/exceptions.hpp"
-#include "ifca/isIfcaInterface.hpp"
 #include "ifca/maxParallel.hpp"
 #include "ifca/transform/isTransformExpression.hpp"
 #include "ifca/types.hpp"
@@ -146,8 +145,8 @@ class IfcaImpl {
                          std::future<void>& previous_processing_future,
                          FirstTransform&& firstTransform,
                          RestOfTransforms&&... restOfTransforms) {
-    auto&& onResolveCallback = [&previous_processing_future, this](decltype(
-                                   std::forward<Out>(chunk)) resolvedValue) {
+    auto&& onResolveCallback = [&previous_processing_future,
+                                this](auto&& resolvedValue) {
       onResolve(FWD(resolvedValue), previous_processing_future);
     };
     auto&& onRejectCallback = [this] { onReject(); };
