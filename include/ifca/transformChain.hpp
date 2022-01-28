@@ -3,46 +3,7 @@
 
 #include <tuple>
 
-// TODO: add namespace
-
-/**
- * @brief Helper class to deduce type of  chained transforms
- */
-template <typename NextTransform = void, typename CurrentTransforms = void>
-struct transform_chain;
-
-/**
- * @brief Empty transform chain
- */
-template <>
-struct transform_chain<> {
-  using type = std::tuple<>;
-};
-
-/**
- * @brief Single transform in chain
- */
-template <typename FirstTransform>
-struct transform_chain<FirstTransform, void> {
-  using type = std::tuple<FirstTransform>;
-};
-
-/**
- * @brief Multiple transforms in chain
- *
- * @tparam NextTransform New transform to attach to chain
- * @tparam CurrentTransforms
- */
-template <typename NextTransform, typename... CurrentTransforms>
-struct transform_chain<NextTransform, std::tuple<CurrentTransforms...>> {
-  using type = std::tuple<CurrentTransforms..., NextTransform>;
-};
-
-/**
- * @brief Helper alias template to get type of transform chain.
- */
-template <typename T1 = void, typename T2 = void>
-using transform_chain_t = typename transform_chain<T1, T2>::type;
+namespace detail {
 
 template <typename ExistingTransformChain, typename NewTransfrom,
           std::size_t... I>
@@ -69,5 +30,7 @@ auto ForwardTransformChain(ExistingTransformChain&& existingTransformChain,
   return ForwardTransformChainImpl<ExistingTransformChain, NewTransfrom>(
       FWD(existingTransformChain), FWD(newTransfrom), Indices{});
 }
+
+}  // namespace detail
 
 #endif  // TRANSFORM_CHAIN_H

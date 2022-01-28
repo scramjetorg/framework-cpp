@@ -21,7 +21,6 @@ class DrainState {
 
   bool drainOccured();
   bool drained();
-  drain_sfuture get();
   operator drain_sfuture();
 
   void ChunkStartedProcessing();

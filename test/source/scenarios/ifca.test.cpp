@@ -50,7 +50,7 @@ TEST_CASE_TEMPLATE("IFCA- Basic tests", TestData, TestTypes) {
   }
 
   SUBCASE("Simple transformation") {
-    auto ifca = Ifca(each(modifyData), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(modifyData));
     std::vector<out> results;
 
     for (auto &&s : testSequence) {
@@ -78,7 +78,7 @@ TEST_CASE_TEMPLATE("IFCA- Basic tests", TestData, TestTypes) {
       test_utils::Timer::waitFor(std::chrono::milliseconds(chunk * 10));
       return chunk;
     };
-    auto ifca = Ifca(each(delayFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(delayFunc));
     std::vector<int> results;
 
     for (auto &&s : testSequence) {
@@ -110,7 +110,7 @@ TEST_CASE("IFCA- Ordering tests") {
   };
 
   SUBCASE("Result order with odd chunks delayed") {
-    auto ifca = Ifca(each(delayFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(delayFunc));
     decltype(dataset1) results;
     for (auto &&s : dataset1) {
       ifca.write(s);
@@ -122,7 +122,7 @@ TEST_CASE("IFCA- Ordering tests") {
   }
 
   SUBCASE("Result order with varying processing time") {
-    auto ifca = Ifca(each(delayFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(delayFunc));
     decltype(dataset2) results;
     for (auto &&s : dataset2) {
       ifca.write(s);
@@ -134,7 +134,7 @@ TEST_CASE("IFCA- Ordering tests") {
   }
 
   SUBCASE("Write and read in turn") {
-    auto ifca = Ifca(each(delayFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(delayFunc));
     std::vector<std::future<out>> result_futures;
     decltype(dataset2) results;
     for (auto &&s : dataset2) {
@@ -148,7 +148,7 @@ TEST_CASE("IFCA- Ordering tests") {
   }
 
   SUBCASE("Multiple concurrent reads") {
-    auto ifca = Ifca(each(delayFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(delayFunc));
     std::vector<std::future<out>> result_futures;
     decltype(dataset2) results;
     for (auto &&s : dataset2) {
@@ -164,7 +164,7 @@ TEST_CASE("IFCA- Ordering tests") {
   }
 
   SUBCASE("Reads before write") {
-    auto ifca = Ifca(each(delayFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(delayFunc));
     std::vector<std::future<out>> result_futures;
     decltype(dataset2) results;
     for (auto i = dataset2.size(); i--;) {
@@ -190,7 +190,7 @@ TEST_CASE("IFCA- Filtering tests") {
   auto filterFunc = [](in chunk) { return !(chunk % 2); };
 
   SUBCASE("Support for dropping chunks") {
-    auto ifca = Ifca(filter(filterFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(filter(filterFunc));
     decltype(dataset1) results;
 
     for (auto &&s : dataset1) ifca.write(s);
@@ -202,7 +202,7 @@ TEST_CASE("IFCA- Filtering tests") {
   }
 
   SUBCASE("Reads before filtering") {
-    auto ifca = Ifca(filter(filterFunc), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(filter(filterFunc));
     decltype(dataset1) results;
     std::vector<std::future<in>> result_futures;
 
@@ -225,8 +225,9 @@ TEST_CASE("IFCA- Filtering tests") {
       secondFuncCalled = true;
       return true;
     };
-    auto ifca =
-        Ifca(filter(filterAll), kMaxParallel).addTransform(each(checkCall));
+    auto ifca = Ifca(kMaxParallel)
+                    .addTransform(filter(filterAll))
+                    .addTransform(each(checkCall));
     decltype(dataset1) results;
 
     for (auto &&s : dataset1) ifca.write(s);
@@ -257,7 +258,7 @@ TEST_CASE_TEMPLATE("IFCA- Limits tests", TestData, TestTypes) {
   }
 
   SUBCASE("Unrestricted writing below limit") {
-    auto ifca = Ifca(each(modifyData), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(modifyData));
     std::vector<drain_sfuture> drains;
     REQUIRE_GE(testSequence.size(), kMaxParallel - 1);
 
@@ -271,7 +272,7 @@ TEST_CASE_TEMPLATE("IFCA- Limits tests", TestData, TestTypes) {
   }
 
   SUBCASE("Drain pending when limit reached") {
-    auto ifca = Ifca(each(modifyData), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(modifyData));
     std::vector<drain_sfuture> drains;
     REQUIRE_GE(testSequence.size(), kMaxParallel);
 
@@ -290,7 +291,7 @@ TEST_CASE_TEMPLATE("IFCA- Limits tests", TestData, TestTypes) {
   }
 
   SUBCASE("Drain resolved when drops below limit") {
-    auto ifca = Ifca(each(modifyData), kMaxParallel);
+    auto ifca = Ifca(kMaxParallel).addTransform(each(modifyData));
     std::vector<drain_sfuture> drains;
     const auto write_count = kMaxParallel + 2;
     REQUIRE_GE(testSequence.size(), write_count);

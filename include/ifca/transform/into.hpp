@@ -13,8 +13,8 @@ template <typename Function>
 class IntoTransform
     : public CrtpImpl<IntoTransform, Function, OrderedExpression> {
  public:
-  using BaseType = CrtpImpl<IntoTransform, Function, OrderedExpression>;
-  using ExactType = typename BaseType::ExactType;
+  using base_type = CrtpImpl<IntoTransform, Function, OrderedExpression>;
+  using exact_type = typename base_type::exact_type;
   explicit IntoTransform(Function& function) : function_(function) {}
 
   template <typename... Values, typename TailTransform>

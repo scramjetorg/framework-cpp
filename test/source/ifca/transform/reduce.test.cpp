@@ -2,7 +2,5 @@
 
 namespace ifca {
 
-TEST_CASE("Transform reduce") {
-//   SUBCASE("") { CHECK(true); }
-}
+TEST_CASE("Transform reduce") {}
 }  // namespace ifca
