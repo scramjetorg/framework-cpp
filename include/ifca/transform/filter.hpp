@@ -92,6 +92,7 @@ class FilterTransform<
     }
   }
 
+  // TODO: remove after adding "final" transforms
   template <typename Chunk, typename ResolveCallback, typename RejectCallback>
   void operator()(Chunk&& chunk, ResolveCallback&& resolve,
                   RejectCallback&& reject) {

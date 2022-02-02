@@ -29,6 +29,7 @@ class EachTransform
          FWD(transforms)...);
   }
 
+  // TODO: remove after adding "final" transforms
   template <typename Chunk, typename ResolveCallback, typename RejectCallback>
   void operator()(Chunk&& chunk, ResolveCallback&& resolve, RejectCallback&&) {
     resolve(std::forward<Function>(func_)(FWD(chunk)));

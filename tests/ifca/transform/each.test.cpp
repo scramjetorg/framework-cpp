@@ -58,6 +58,7 @@ TEST_CASE("EachTransform no implicit copies") {
 
   auto testValue = TestClass();
   eachTransform(testValue, resolvedFunc, rejectedFunc);
+  CHECK_EQ(testValue.copy_count_, 0);
 }
 
 }  // namespace ifca

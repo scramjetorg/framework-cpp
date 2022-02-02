@@ -90,6 +90,7 @@ class IfcaImpl {
     return read;
   }
 
+  // TODO: check on else statement if Transform::input_type is equal input_type
   template <typename Transform, typename Enable = std::enable_if_t<
                                     is_transform_expression_v<Transform>>>
   auto addTransform(Transform&& transform) {

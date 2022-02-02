@@ -14,6 +14,7 @@ struct function_traits<R(Args...)> {
   static const size_t nargs = sizeof...(Args);
 
   using return_type = R;
+  using function_type = R(Args...);
 
   template <size_t i>
   using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
@@ -25,24 +26,28 @@ struct function_traits<R (*)(Args...)> : public function_traits<R(Args...)> {};
 template <typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...)> : public function_traits<R(Args...)> {
   using class_type = C&;
+  using function_type = R(C::*)(Args...);
 };
 
 template <typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) const>
     : public function_traits<R(Args...)> {
   using class_type = const C&;
+  using function_type = R(C::*)(Args...);
 };
 
 template <typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) volatile>
     : public function_traits<R(Args...)> {
   using class_type = volatile C&;
+  using function_type = R(C::*)(Args...);
 };
 
 template <typename C, typename R, typename... Args>
 struct function_traits<R (C::*)(Args...) const volatile>
     : public function_traits<R(Args...)> {
   using class_type = const volatile C&;
+  using function_type = R(C::*)(Args...);
 };
 
 template <typename FunctionType>
