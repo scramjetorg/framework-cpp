@@ -1,34 +1,66 @@
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/MacOS/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Windows/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Ubuntu/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Style/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Install/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![codecov](https://codecov.io/gh/TheLartians/ModernCppStarter/branch/master/graph/badge.svg)](https://codecov.io/gh/TheLartians/ModernCppStarter)
+Scramjet Framework C++
+==================
 
 <p align="center">
-  <img src="https://repository-images.githubusercontent.com/254842585/4dfa7580-7ffb-11ea-99d0-46b8fe2f4170" height="175" width="auto" />
+    <a><img src="https://img.shields.io/github/license/scramjetorg/framework-cpp?color=green&style=plastic" alt="GitHub license" /></a>
+    <a><img src="https://img.shields.io/github/v/tag/scramjetorg/framework-cpp?label=version&color=blue&style=plastic" alt="version" /></a>
+    <a><img src="https://img.shields.io/github/stars/scramjetorg/framework-cpp?color=pink&style=plastic" alt="GitHub stars" /></a>
+    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7F7V65C43EBMW">
+        <img src="https://img.shields.io/badge/Donate-PayPal-green.svg?color=yellow&style=plastic" alt="Donate" />
+    </a>
+</p>
+<p align="center">⭐ Star us on GitHub — it motivates us a lot! 🚀 </p>
+<p align="center">
+    <img src="https://assets.scramjet.org/images/framework-logo-256.svg" width="420" alt="Scramjet Framework">
 </p>
 
-# ModernCppStarter
+Scramjet is a simple reactive stream programming framework. The code is written by chaining functions that transform the streamed data, including well known map, filter and reduce.
 
-Setting up a new C++ project usually requires a significant amount of preparation and boilerplate code, even more so for modern C++ projects with tests, executables and continuous integration.
-This template is the result of learnings from many previous projects and should help reduce the work required to setup up a modern C++ project.
+The main advantage of Scramjet is running asynchronous operations on your data streams concurrently. It allows you to perform the transformations both synchronously and asynchronously by using the same API - so now you can "map" your stream from whatever source and call any number of API's consecutively.
 
-## Features
+[Originally written](https://github.com/scramjetorg/scramjet) on top of node.js
+object streams, Scramjet is now being ported into C++. This is what is
+happening in this repository. There is also [JavaScript/TypeScript](https://github.com/scramjetorg/framework-js) and [Python](https://github.com/scramjetorg/framework-python) version available.
 
-- [Modern CMake practices](https://pabloariasal.github.io/2018/02/19/its-time-to-do-cmake-right/)
-- Suited for single header libraries and projects of any scale
-- Clean separation of library and executable code
-- Integrated test suite
-- Continuous integration via [GitHub Actions](https://help.github.com/en/actions/)
-- Code coverage via [codecov](https://codecov.io)
-- Code formatting enforced by [clang-format](https://clang.llvm.org/docs/ClangFormat.html) and [cmake-format](https://github.com/cheshirekow/cmake_format) via [Format.cmake](https://github.com/TheLartians/Format.cmake)
-- Reproducible dependency management via [CPM.cmake](https://github.com/TheLartians/CPM.cmake)
-- Installable target with automatic versioning information and header generation via [PackageProject.cmake](https://github.com/TheLartians/PackageProject.cmake)
-- Automatic [documentation](https://thelartians.github.io/ModernCppStarter) and deployment with [Doxygen](https://www.doxygen.nl) and [GitHub Pages](https://pages.github.com)
-- Support for [sanitizer tools, and more](#additional-tools)
+**We are open to your feedback!** We encourage you to report issues with any ideas, suggestions and features you would like to see in this version. You can also upvote (`+1`) existing ones to show us the direction we should take in developing Scramjet Framework.
+
+
+## Table of contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Requesting features](#requesting-features)
+- [Reporting bugs](#reporting-bugs)
+- [Contributing](#contributing)
+- [Development Setup](#development-setup)
+
+## Installation
+
+// TBD
 
 ## Usage
+
+// TBD
+
+## Requesting Features
+
+Anything missing? Or maybe there is something which would make using Scramjet Framework much easier or efficient? Don't hesitate to fill up a [new feature request](https://github.com/scramjetorg/framework-cpp/issues/new)! We really appreciate all feedback.
+
+## Reporting bugs
+
+If you have found a bug, inconsistent or confusing behavior please fill up a [new bug report](https://github.com/scramjetorg/framework-cpp/issues/new).
+
+## Contributing
+
+You can contribute to this project by giving us feedback ([reporting bugs](#reporting-bugs) and [requesting features](#reporting-features)) and also by writing code yourself!
+
+The easiest way is to [create a fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of this repository and then [create a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) with all your changes. In most cases, you should branch from and target `main` branch.
+
+Please refer to [Development Setup](#development-setup) section on how to setup this project.
+
+## Development Setup
+
+// TBD (below previous setup instructions)
 
 ### Adjust the template to your needs
 
@@ -44,7 +76,7 @@ This template is the result of learnings from many previous projects and should 
 Eventually, you can remove any unused files, such as the standalone directory or irrelevant github workflows for your project.
 Feel free to replace the License with one suited for your project.
 
-To cleanly separate the library and subproject code, the outer `CMakeList.txt` only defines the library itself while the tests and other subprojects are self-contained in their own directories. 
+To cleanly separate the library and subproject code, the outer `CMakeList.txt` only defines the library itself while the tests and other subprojects are self-contained in their own directories.
 During development it is usually convenient to [build all subprojects at once](#build-everything-at-once).
 
 ### Build and run the standalone target
@@ -72,7 +104,7 @@ cmake -S test -B build/test
 cmake --build build/test
 CTEST_OUTPUT_ON_FAILURE=1 cmake --build build/test --target test
 
-# or simply call the executable: 
+# or simply call the executable:
 ./build/test/GreeterTests
 ```
 
@@ -144,60 +176,3 @@ Additional arguments can be passed to the analyzers by setting the `CLANG_TIDY_A
 #### Ccache
 
 Ccache can be enabled by configuring with `-DUSE_CCACHE=<ON | OFF>`.
-
-## FAQ
-
-> Can I use this for header-only libraries?
-
-Yes, however you will need to change the library type to an `INTERFACE` library as documented in the [CMakeLists.txt](CMakeLists.txt).
-See [here](https://github.com/TheLartians/StaticTypeInfo) for an example header-only library based on the template.
-
-> I don't need a standalone target / documentation. How can I get rid of it?
-
-Simply remove the standalone / documentation directory and according github workflow file.
-
-> Can I build the standalone and tests at the same time? / How can I tell my IDE about all subprojects?
-
-To keep the template modular, all subprojects derived from the library have been separated into their own CMake modules.
-This approach makes it trivial for third-party projects to re-use the projects library code.
-To allow IDEs to see the full scope of the project, the template includes the `all` directory that will create a single build for all subprojects.
-Use this as the main directory for best IDE support.
-
-> I see you are using `GLOB` to add source files in CMakeLists.txt. Isn't that evil?
-
-Glob is considered bad because any changes to the source file structure [might not be automatically caught](https://cmake.org/cmake/help/latest/command/file.html#filesystem) by CMake's builders and you will need to manually invoke CMake on changes.
-  I personally prefer the `GLOB` solution for its simplicity, but feel free to change it to explicitly listing sources.
-
-> I want create additional targets that depend on my library. Should I modify the main CMakeLists to include them?
-
-Avoid including derived projects from the libraries CMakeLists (even though it is a common sight in the C++ world), as this effectively inverts the dependency tree and makes the build system hard to reason about.
-Instead, create a new directory or project with a CMakeLists that adds the library as a dependency (e.g. like the [standalone](standalone/CMakeLists.txt) directory).
-Depending type it might make sense move these components into a separate repositories and reference a specific commit or version of the library.
-This has the advantage that individual libraries and components can be improved and updated independently.
-
-> You recommend to add external dependencies using CPM.cmake. Will this force users of my library to use CPM.cmake as well?
-
-[CPM.cmake](https://github.com/TheLartians/CPM.cmake) should be invisible to library users as it's a self-contained CMake Script.
-If problems do arise, users can always opt-out by defining the CMake or env variable [`CPM_USE_LOCAL_PACKAGES`](https://github.com/cpm-cmake/CPM.cmake#options), which will override all calls to `CPMAddPackage` with the according `find_package` call.
-This should also enable users to use the project with their favorite external C++ dependency manager, such as vcpkg or Conan.
-
-> Can I configure and build my project offline?
-
-No internet connection is required for building the project, however when using CPM missing dependencies are downloaded at configure time.
-To avoid redundant downloads, it's highly recommended to set a CPM.cmake cache directory, e.g.: `export CPM_SOURCE_CACHE=$HOME/.cache/CPM`.
-This will enable shallow clones and allow offline configurations dependencies are already available in the cache.
-
-> Can I use CPack to create a package installer for my project?
-
-As there are a lot of possible options and configurations, this is not (yet) in the scope of this template. See the [CPack documentation](https://cmake.org/cmake/help/latest/module/CPack.html) for more information on setting up CPack installers.
-
-> This is too much, I just want to play with C++ code and test some libraries.
-
-Perhaps the [MiniCppStarter](https://github.com/TheLartians/MiniCppStarter) is something for you!
-
-## Related projects and alternatives
-
-- [**ModernCppStarter & PVS-Studio Static Code Analyzer**](https://github.com/viva64/pvs-studio-cmake-examples/tree/master/modern-cpp-starter): Official instructions on how to use the ModernCppStarter with the PVS-Studio Static Code Analyzer.
-- [**lefticus/cpp_starter_project**](https://github.com/lefticus/cpp_starter_project/): A popular C++ starter project, created in 2017.
-- [**filipdutescu/modern-cpp-template**](https://github.com/filipdutescu/modern-cpp-template): A recent starter using a more traditional approach for CMake structure and dependency management.
-- [**vector-of-bool/pitchfork**](https://github.com/vector-of-bool/pitchfork/): Pitchfork is a Set of C++ Project Conventions.
