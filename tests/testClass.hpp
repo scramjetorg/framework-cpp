@@ -35,11 +35,12 @@ struct TestClass {
   bool operator==(const std::string& s) const { return name_ == s; }
   bool operator==(const TestClass& tc) const { return name_ == tc.name_; }
 
-  TestClass(TestClass&& o)
+  TestClass(TestClass&& o) noexcept
       : name_(std::move(o.name_)),
         copy_count_(o.copy_count_),
         move_count_(o.move_count_ + 1) {}
-  TestClass& operator=(TestClass&& o) {
+
+  TestClass& operator=(TestClass&& o) noexcept {
     name_ = o.name_;
     copy_count_ = o.copy_count_;
     move_count_ = o.move_count_ + 1;

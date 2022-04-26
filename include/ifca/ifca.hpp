@@ -180,7 +180,7 @@ class IfcaImpl {
 
 template <typename Input = void, typename Output = Input>
 inline auto Ifca(unsigned int max_parallel = maxParallel()) {
-  return IfcaImpl<Input, Input>(max_parallel);
+  return IfcaImpl<Input, Output>(max_parallel);
 }
 
 }  // namespace ifca

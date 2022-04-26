@@ -1,3 +1,5 @@
+#include "ifca/ifca.hpp"
+
 #include <doctest/doctest.h>
 
 #include <algorithm>
@@ -10,7 +12,6 @@
 #include "helpers/futureIsReady.hpp"
 #include "helpers/timer.hpp"
 #include "ifca/exceptions.hpp"
-#include "ifca/ifca.hpp"
 #include "ifca/transform/each.hpp"
 #include "ifca/transform/filter.hpp"
 #include "ifca/types.hpp"
@@ -64,14 +65,14 @@ TEST_CASE_TEMPLATE("IFCA- Basic tests", TestData, TestTypes) {
   }
 
   SUBCASE("Concurrent processing") {
-    auto testSequence = test_utils::TestData<int>().testSequence();
+    auto testSequenceInt = test_utils::TestData<int>().testSequence();
     auto timeResolution = 10000;
     int maxExpectedTime =
-        timeResolution * std::accumulate(testSequence.begin(),
-                                         testSequence.end(),
-                                         decltype(testSequence)::value_type(0));
+        timeResolution *
+        std::accumulate(testSequenceInt.begin(), testSequenceInt.end(),
+                        decltype(testSequenceInt)::value_type(0));
     auto minExpectedTimeIt =
-        std::max_element(testSequence.begin(), testSequence.end());
+        std::max_element(testSequenceInt.begin(), testSequenceInt.end());
     int minExpectedTime = timeResolution * (*minExpectedTimeIt);
 
     auto delayFunc = [](int chunk) {
@@ -81,11 +82,11 @@ TEST_CASE_TEMPLATE("IFCA- Basic tests", TestData, TestTypes) {
     auto ifca = Ifca(kMaxParallel).addTransform(each(delayFunc));
     std::vector<int> results;
 
-    for (auto &&s : testSequence) {
+    for (auto &&s : testSequenceInt) {
       ifca.write(s);
     }
     auto start = std::chrono::system_clock::now();
-    for (auto i = testSequence.size(); i--;) {
+    for (auto i = testSequenceInt.size(); i--;) {
       results.push_back(std::move(ifca.read().get()));
     }
     auto end = std::chrono::system_clock::now();
@@ -95,7 +96,7 @@ TEST_CASE_TEMPLATE("IFCA- Basic tests", TestData, TestTypes) {
 
     CHECK_LE(time_span, maxExpectedTime);
     CHECK_GE(time_span, minExpectedTime);
-    CHECK(std::equal(results.begin(), results.end(), testSequence.begin()));
+    CHECK(std::equal(results.begin(), results.end(), testSequenceInt.begin()));
   }
 }
 
@@ -322,7 +323,6 @@ TEST_CASE_TEMPLATE("IFCA- Limits tests", TestData, TestTypes) {
 TEST_CASE_TEMPLATE("IFCA- Ending tests", TestData, TestTypes) {
   using in = typename TestData::input;
 
-  const unsigned int kMaxParallel = 4;
   auto data = TestData();
   auto testSequence = data.testSequence();
 

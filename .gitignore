@@ -1,5 +1,9 @@
-/build*
-/.vscode
-/cpm_modules
+*.xc*
 .DS_Store
+.vs/
+/.vscode
+build/
+install/
+out/
+.vscode/
 *.log

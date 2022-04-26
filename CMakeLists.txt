@@ -1,16 +1,10 @@
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-
-# ---- Project ----
+cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
 
 project(
   IFCA
   VERSION 1.0
-  LANGUAGES CXX
+  HOMEPAGE_URL "https://github.com/scramjetorg/framework-cpp"
 )
-
-set(CMAKE_CXX_STANDARD 17)
-
-# ---- Include guards ----
 
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   message(
@@ -19,62 +13,33 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 
-# ---- Add dependencies via CPM ----
-# see https://github.com/TheLartians/CPM.cmake for more info
+set(LOG_LVL LOG_LEVEL_NONE CACHE STRING  "Logging level used <LOG_LEVEL_ALL|LOG_LEVEL_DEBUG|LOG_LEVEL_INFO|LOG_LEVEL_WARNING|LOG_LEVEL_ERROR|LOG_LEVEL_NONE>" )
+set(LOG_TYPE LOG_TYPE_CONSOLE CACHE STRING "Logging output used <LOG_TYPE_CONSOLE|LOG_TYPE_FILE>")
+add_compile_definitions(LOG_LVL=${LOG_LVL} LOG_TYPE=${LOG_TYPE})
 
-include(cmake/CPM.cmake)
+# TODO: add install
+#option(TEST_INSTALLED_VERSION "Test the version found by find_package" OFF)
+option(BUILD_TESTING "Enable testing" OFF)
 
-# PackageProject.cmake will be used to make our target installable
-CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.6.0")
+add_library(IFCA SHARED "")
 
-# CPMAddPackage( NAME fmt GIT_TAG 7.1.3 GITHUB_REPOSITORY fmtlib/fmt OPTIONS "FMT_INSTALL YES" #
-# create an installable target )
+set_target_properties(IFCA PROPERTIES CXX_STANDARD 17) 
 
-# ---- Add source files ----
+add_subdirectory(include)
+add_subdirectory(src)
 
-# Note: globbing sources is considered bad practice as CMake's generators may not detect new files
-# automatically. Keep that in mind when changing files, or explicitly mention them here.
-file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
-
-# ---- Create library ----
-
-# Note: for header-only libraries change all PUBLIC flags to INTERFACE and create an interface
-# target: add_library(IFCA INTERFACE)
-add_library(IFCA SHARED ${headers} ${sources})
-
-set_target_properties(IFCA PROPERTIES CXX_STANDARD 17)
-
-# being a cross-platform target, we enforce standards conformance on MSVC
-target_compile_options(IFCA PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
-
-# TODO: specify for unix build
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(IFCA PRIVATE Threads::Threads)
 
-# Link dependencies target_link_libraries(IFCA PRIVATE fmt::fmt)
+target_compile_options(IFCA PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 target_include_directories(
   IFCA PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
               $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
-# ---- Create an installable target ----
-# this allows users to install and find the library via `find_package()`.
-
-# the location where the project's version header will be placed should match the project's regular
-# header paths
-string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
-
-packageProject(
-  NAME ${PROJECT_NAME}
-  VERSION ${PROJECT_VERSION}
-  NAMESPACE ${PROJECT_NAME}
-  BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
-  INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
-  VERSION_HEADER "${VERSION_HEADER_LOCATION}"
-  COMPATIBILITY SameMajorVersion
-  # DEPENDENCIES "fmt 7.1.3"
-)
+if(BUILD_TESTING OR ENABLE_TEST_COVERAGE)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
