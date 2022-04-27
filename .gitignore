@@ -7,3 +7,5 @@ install/
 out/
 .vscode/
 *.log
+CMakeCache.txt
+CMakeFiles/
