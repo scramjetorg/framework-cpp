@@ -21,9 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Mark OS
-        run: echo "JOB_ARCH=linux" >> $GITHUB_ENV
-
       - name: Build doctest
         if: ${{ matrix.type == 'debug' }}
         run: |
@@ -39,16 +36,16 @@ jobs:
         run: cmake --list-presets=all .
 
       - name: Make preset
-        run: cmake --preset ${{ env.JOB_ARCH }}-${{ matrix.type }}
+        run: cmake --preset linux-${{ matrix.type }}
 
       - name: Build
         run: cmake --build .
-        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}
+        working-directory: ./out/build/linux-${{ matrix.type }}
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
-        run: IFCATest
-        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}/tests
+        run: IFCA_tests
+        working-directory: ./out/build/linux-${{ matrix.type }}/tests
 
   windows:
     strategy:
@@ -64,11 +61,11 @@ jobs:
 
       - name: Mark OS (windows x64)
         if: ${{ matrix.os == 'windows-latest' }}
-        run: echo "JOB_ARCH=x64" >> $GITHUB_ENV
+        run: echo "JOB_ARCH=x64" >> $env:GITHUB_ENV
 
       - name: Mark OS (windows x86)
         if: ${{ matrix.os == 'windows-2016' }}
-        run: echo "JOB_ARCH=x86" >> $GITHUB_ENV
+        run: echo "JOB_ARCH=x86" >> $env:GITHUB_ENV
 
       - name: Build doctest
         if: ${{ matrix.type == 'debug' }}
@@ -85,13 +82,13 @@ jobs:
         run: cmake --list-presets=all .
 
       - name: Make preset
-        run: cmake --preset ${{ env.JOB_ARCH }}-${{ matrix.type }}
+        run: cmake --preset ${{ $env:JOB_ARCH }}-${{ matrix.type }}"
 
       - name: Build
         run: cmake --build .
-        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}
+        working-directory: ./out/build/${{ $env:JOB_ARCH }}-${{ matrix.type }}
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
-        run: IFCATest.exe
-        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}/tests
+        run: IFCA_tests.exe
+        working-directory: ./out/build/${{ $env:JOB_ARCH }}-${{ matrix.type }}/tests
