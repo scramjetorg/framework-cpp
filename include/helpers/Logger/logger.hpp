@@ -8,9 +8,6 @@
 #define LOG_LEVEL_ERROR 1
 #define LOG_LEVEL_NONE 0
 
-// TODO: move to build configuration
-#define LOG_LVL LOG_LEVEL_ALL
-
 #include "emptyLogger.hpp"
 #include "logMessage.hpp"
 #include "time.hpp"

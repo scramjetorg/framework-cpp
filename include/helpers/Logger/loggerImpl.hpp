@@ -8,9 +8,6 @@
 #define LOG_TYPE_CONSOLE 1
 #define LOG_TYPE_FILE 2
 
-// TODO: move to build configuration
-#define LOG_TYPE LOG_TYPE_CONSOLE
-
 class Logger {
  public:
   Logger(const Logger&) = delete;

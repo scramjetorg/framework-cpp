@@ -49,7 +49,7 @@ struct LogMessage {
   LogMessage(const LogMessage&) = delete;
   LogMessage& operator=(const LogMessage&) = delete;
   LogMessage& operator=(LogMessage&&) = delete;
-  LogMessage(LogMessage&& buf) : logger_(buf.logger_){};
+  LogMessage(LogMessage&& buf) noexcept : logger_(buf.logger_){};
 
   template <typename T>
   LogMessage& operator<<(T&& message) {
