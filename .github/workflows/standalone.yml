@@ -9,27 +9,22 @@ on:
       - main
 
 jobs:
-  run:
+  linux:
     strategy:
       fail-fast: false
       matrix:
         type: [release, debug]
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Mark OS (linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: echo "JOB_OS=linux" >> $GITHUB_ENV
+      - name: Mark OS
+        run: echo "JOB_ARCH=linux" >> $GITHUB_ENV
 
-      - name: Mark OS (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: echo "JOB_OS=windows" >> $GITHUB_ENV
-
-      - name: Install doctest
+      - name: Build doctest
         if: ${{ matrix.type == 'debug' }}
         run: |
           git clone https://github.com/doctest/doctest.git
@@ -44,13 +39,59 @@ jobs:
         run: cmake --list-presets=all .
 
       - name: Make preset
-        run: cmake --preset ${{ env.JOB_OS }}-${{ matrix.type }}
+        run: cmake --preset ${{ env.JOB_ARCH }}-${{ matrix.type }}
 
       - name: Build
         run: cmake --build .
-        working-directory: ./out/build/${{ env.JOB_OS }}-${{ matrix.type }}
+        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
-        run: ./IFCATest
-        working-directory: ./out/build/${{ env.JOB_OS }}-${{ matrix.type }}/tests
+        run: IFCATest
+        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}/tests
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [release, debug]
+        os: [windows-latest, windows-2016]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Mark OS (windows x64)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: echo "JOB_ARCH=x64" >> $GITHUB_ENV
+
+      - name: Mark OS (windows x86)
+        if: ${{ matrix.os == 'windows-2016' }}
+        run: echo "JOB_ARCH=x86" >> $GITHUB_ENV
+
+      - name: Build doctest
+        if: ${{ matrix.type == 'debug' }}
+        run: |
+          git clone https://github.com/doctest/doctest.git
+          cd doctest
+          mkdir out
+          cd out
+          cmake ..
+          cmake --build .
+          cmake --install .
+
+      - name: List presets
+        run: cmake --list-presets=all .
+
+      - name: Make preset
+        run: cmake --preset ${{ env.JOB_ARCH }}-${{ matrix.type }}
+
+      - name: Build
+        run: cmake --build .
+        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}
+
+      - name: Test
+        if: ${{ matrix.type == 'debug' }}
+        run: IFCATest.exe
+        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}/tests
