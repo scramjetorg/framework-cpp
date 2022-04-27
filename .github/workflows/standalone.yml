@@ -28,7 +28,16 @@ jobs:
             echo "JOB_OS=linux" >> $GITHUB_ENV
           fi
 
-      # debug requires doctest
+      - name: Install doctest
+        if: ${{ matrix.type == 'debug' }}
+        run: |
+          git clone https://github.com/doctest/doctest.git
+          cd doctest
+          mkdir out
+          cd out
+          cmake ..
+          cmake --build .
+          cmake --install .
 
       - name: List presets
         run: cmake --list-presets=all .
