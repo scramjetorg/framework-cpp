@@ -44,8 +44,8 @@ jobs:
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
-        run: IFCA_tests
-        working-directory: ./out/build/linux-${{ matrix.type }}/tests
+        run: ./IFCA_tests
+        working-directory: ./out/build/linux-${{ matrix.type }}/tests/
 
   windows:
     strategy:
@@ -82,13 +82,13 @@ jobs:
         run: cmake --list-presets=all .
 
       - name: Make preset
-        run: cmake --preset ${{ $env:JOB_ARCH }}-${{ matrix.type }}"
+        run: cmake --preset ${{ env.JOB_ARCH }}-${{ matrix.type }}
 
       - name: Build
         run: cmake --build .
-        working-directory: ./out/build/${{ $env:JOB_ARCH }}-${{ matrix.type }}
+        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
         run: IFCA_tests.exe
-        working-directory: ./out/build/${{ $env:JOB_ARCH }}-${{ matrix.type }}/tests
+        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}/tests
