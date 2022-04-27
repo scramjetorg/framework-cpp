@@ -9,27 +9,38 @@ on:
       - main
 
 jobs:
-  build:
+  run:
     strategy:
       matrix:
         type: [release, debug]
         os: [ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v2
 
-#      - name: Mark OS
-#        run: echo "JOB_OS=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+      - name: Mark OS
+        run: |
+          if echo "$OUTPUT" | grep -q "windows"; then
+            echo "JOB_OS=windows" >> $GITHUB_ENV
+          else
+            echo "JOB_OS=linux" >> $GITHUB_ENV
+          fi
+
+      # debug requires doctest
 
       - name: List presets
         run: cmake --list-presets=all .
 
       - name: Make preset
-        run: cmake --preset linux-${{ matrix.type }}
+        run: cmake --preset ${{ env.JOB_OS }}-${{ matrix.type }}
 
       - name: Build
         run: cmake --build .
-        working-directory: ./out/build/linux-${{ matrix.type }}
+        working-directory: ./out/build/${{ env.JOB_OS }}-${{ matrix.type }}
 
-# if debug run tests
+      - name: Test
+        if: ${{ matrix.type == 'debug' }}
+        run: ./IFCATest
+        working-directory: ./out/build/${{ env.JOB_OS }}-${{ matrix.type }}/tests
