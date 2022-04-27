@@ -1,32 +1,35 @@
-name: Standalone
+name: Build and test
 
 on:
   push:
     branches:
-      - master
       - main
   pull_request:
     branches:
-      - master
       - main
-
-env:
-  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        type: [release, debug]
+        os: [ubuntu-latest, windows-latest]
 
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/cache@v2
-        with:
-          path: "**/cpm_modules"
-          key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+#      - name: Mark OS
+#        run: echo "JOB_OS=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
 
-      - name: configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_BUILD_TYPE=Debug
+      - name: List presets
+        run: cmake --list-presets=all .
 
-      - name: build
-        run: cmake --build build -j4
+      - name: Make preset
+        run: cmake --preset linux-${{ matrix.type }}
+
+      - name: Build
+        run: cmake --build .
+        working-directory: ./out/build/linux-${{ matrix.type }}
+
+# if debug run tests
