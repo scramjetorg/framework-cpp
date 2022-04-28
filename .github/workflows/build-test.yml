@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Build doctest
+      - name: Install doctest
         if: ${{ matrix.type == 'debug' }}
         run: |
           git clone https://github.com/doctest/doctest.git
@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         type: [release, debug]
-        os: [windows-latest]
+        os: [windows-latest, windows-2016]
 
     runs-on: ${{ matrix.os }}
 
@@ -61,11 +61,15 @@ jobs:
 
       - name: Mark OS (windows x64)
         if: ${{ matrix.os == 'windows-latest' }}
-        run: echo "JOB_ARCH=x64" >> $env:GITHUB_ENV
+        run: |
+          echo "JOB_ARCH=x64" >> $env:GITHUB_ENV
+          echo "JOB_ARCH_VCVARS=64" >> $env:GITHUB_ENV
 
       - name: Mark OS (windows x86)
         if: ${{ matrix.os == 'windows-2016' }}
-        run: echo "JOB_ARCH=x86" >> $env:GITHUB_ENV
+        run: |
+          echo "JOB_ARCH=x86" >> $env:GITHUB_ENV
+          echo "JOB_ARCH_VCVARS=32" >> $env:GITHUB_ENV
 
       - name: Install Ninja for CMake
         run: |
@@ -83,7 +87,7 @@ jobs:
       - name: Make preset
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars${{ env.JOB_ARCH_VCVARS }}.bat"
           git clone https://github.com/doctest/doctest.git
           cd doctest
           mkdir out
@@ -91,7 +95,6 @@ jobs:
           cmake ..
           cmake --build .
           cmake --install .
-          cd ../..
           cmake --preset ${{ env.JOB_ARCH }}-${{ matrix.type }}
           cd out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}
           cmake --build .
