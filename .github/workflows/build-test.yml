@@ -78,6 +78,11 @@ jobs:
           cmake --build .
           cmake --install .
 
+      - name: Setup Ninja for CMake
+        run: |
+          wget "https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip" -outfile "ninja-win.zip"
+          7z x ninja-win.zip
+
       - name: List presets
         run: cmake --list-presets=all .
 
