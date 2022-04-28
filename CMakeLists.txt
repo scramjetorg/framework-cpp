@@ -23,7 +23,7 @@ option(BUILD_TESTING "Enable testing" OFF)
 
 add_library(IFCA SHARED "")
 
-set_target_properties(IFCA PROPERTIES CXX_STANDARD 17) 
+set_target_properties(IFCA PROPERTIES CXX_STANDARD 17)
 
 add_subdirectory(include)
 add_subdirectory(src)

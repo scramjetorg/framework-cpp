@@ -67,19 +67,15 @@ jobs:
         if: ${{ matrix.os == 'windows-2016' }}
         run: echo "JOB_ARCH=x86" >> $env:GITHUB_ENV
 
-      - name: Download Ninja for CMake
-        shell: bash
-        run: |
-          pwd
-          curl -kLSs https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip --output ninja-win.zip
-          unzip ninja-win.zip
-          ls -la
-
       - name: Install Ninja for CMake
         run: |
           Get-ChildItem
           Get-ChildItem -Path C:\Users
           Get-ChildItem -Path "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build"
+
+      - name: Apply Windows build workaround
+        shell: bash
+        run: sed -i -e 's/add_library(IFCA SHARED/add_library(IFCA STATIC/g' CMakeLists.txt
 
       - name: List presets
         run: cmake --list-presets=all .
@@ -102,5 +98,5 @@ jobs:
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
-        run: IFCA_tests.exe
+        run: .\IFCA_tests.exe
         working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}/tests
