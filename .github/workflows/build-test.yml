@@ -101,7 +101,7 @@ jobs:
       - name: Build all
         shell: cmd
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
           git clone https://github.com/doctest/doctest.git
           cd doctest
           mkdir out
@@ -110,11 +110,11 @@ jobs:
           cmake --build .
           cmake --install .
           cd ../..
-          cmake --preset x64-${{ matrix.type }}
-          cd out/build/x64-${{ matrix.type }}
+          cmake --preset x86-${{ matrix.type }}
+          cd out/build/x86-${{ matrix.type }}
           cmake --build .
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
         run: .\IFCA_tests.exe
-        working-directory: ./out/build/x64-${{ matrix.type }}/tests
+        working-directory: ./out/build/x86-${{ matrix.type }}/tests
