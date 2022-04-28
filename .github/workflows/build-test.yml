@@ -47,35 +47,62 @@ jobs:
         run: ./IFCA_tests
         working-directory: ./out/build/linux-${{ matrix.type }}/tests/
 
-  windows:
+  windows-x64:
     strategy:
       fail-fast: false
       matrix:
         type: [release, debug]
-        os: [windows-latest, windows-2016]
+        os: [windows-latest]
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Mark OS (windows x64)
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          echo "JOB_ARCH=x64" >> $env:GITHUB_ENV
-          echo "JOB_ARCH_VCVARS=64" >> $env:GITHUB_ENV
+      - name: Apply Windows build workaround
+        shell: bash
+        run: sed -i -e 's/add_library(IFCA SHARED/add_library(IFCA STATIC/g' CMakeLists.txt
 
-      - name: Mark OS (windows x86)
-        if: ${{ matrix.os == 'windows-2016' }}
+      - name: List presets
+        run: cmake --list-presets=all .
+
+      - name: Build all
+        shell: cmd
         run: |
-          echo "JOB_ARCH=x86" >> $env:GITHUB_ENV
-          echo "JOB_ARCH_VCVARS=32" >> $env:GITHUB_ENV
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          git clone https://github.com/doctest/doctest.git
+          cd doctest
+          mkdir out
+          cd out
+          cmake ..
+          cmake --build .
+          cmake --install .
+          cmake --preset x64-${{ matrix.type }}
+          cd out/build/x64-${{ matrix.type }}
+          cmake --build .
+
+      - name: Test
+        if: ${{ matrix.type == 'debug' }}
+        run: .\IFCA_tests.exe
+        working-directory: ./out/build/x64-${{ matrix.type }}/tests
+
+  windows-x86:
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [release, debug]
+        os: [windows-2016]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
 
       - name: Install Ninja for CMake
         run: |
           Get-ChildItem
           Get-ChildItem -Path C:\Users
-          Get-ChildItem -Path "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build"
+          Get-ChildItem -Path "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build"
 
       - name: Apply Windows build workaround
         shell: bash
@@ -87,7 +114,7 @@ jobs:
       - name: Make preset
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars${{ env.JOB_ARCH_VCVARS }}.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
           git clone https://github.com/doctest/doctest.git
           cd doctest
           mkdir out
@@ -95,11 +122,11 @@ jobs:
           cmake ..
           cmake --build .
           cmake --install .
-          cmake --preset ${{ env.JOB_ARCH }}-${{ matrix.type }}
-          cd out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}
+          cmake --preset x86-${{ matrix.type }}
+          cd out/build/x86-${{ matrix.type }}
           cmake --build .
 
       - name: Test
         if: ${{ matrix.type == 'debug' }}
         run: .\IFCA_tests.exe
-        working-directory: ./out/build/${{ env.JOB_ARCH }}-${{ matrix.type }}/tests
+        working-directory: ./out/build/x86-${{ matrix.type }}/tests
