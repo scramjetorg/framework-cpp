@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         type: [release, debug]
-        os: [windows-latest, windows-2016]
+        os: [windows-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -79,9 +79,11 @@ jobs:
           cmake --install .
 
       - name: Setup Ninja for CMake
+        shell: bash
         run: |
-          wget "https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip" -outfile "ninja-win.zip"
-          7z x ninja-win.zip
+          pwd
+          ls -la
+          curl https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip --output ninja-win.zip
 
       - name: List presets
         run: cmake --list-presets=all .
