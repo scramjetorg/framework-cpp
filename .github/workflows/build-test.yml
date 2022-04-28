@@ -77,6 +77,7 @@ jobs:
           cmake ..
           cmake --build .
           cmake --install .
+          cd ../..
           cmake --preset x64-${{ matrix.type }}
           cd out/build/x64-${{ matrix.type }}
           cmake --build .
@@ -91,7 +92,7 @@ jobs:
       fail-fast: false
       matrix:
         type: [release, debug]
-        os: [windows-2016]
+        os: [windows-2019]
 
     runs-on: ${{ matrix.os }}
 
@@ -102,7 +103,7 @@ jobs:
         run: |
           Get-ChildItem
           Get-ChildItem -Path C:\Users
-          Get-ChildItem -Path "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build"
+          Get-ChildItem -Path "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build"
 
       - name: Apply Windows build workaround
         shell: bash
@@ -114,7 +115,7 @@ jobs:
       - name: Make preset
         shell: cmd
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
           git clone https://github.com/doctest/doctest.git
           cd doctest
           mkdir out
@@ -122,6 +123,7 @@ jobs:
           cmake ..
           cmake --build .
           cmake --install .
+          cd ../..
           cmake --preset x86-${{ matrix.type }}
           cd out/build/x86-${{ matrix.type }}
           cmake --build .
