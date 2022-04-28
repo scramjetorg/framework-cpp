@@ -59,10 +59,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Apply Windows build workaround
-        shell: bash
-        run: sed -i -e 's/add_library(IFCA SHARED/add_library(IFCA STATIC/g' CMakeLists.txt
-
       - name: List presets
         run: cmake --list-presets=all .
 
@@ -99,23 +95,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install Ninja for CMake
-        run: |
-          Get-ChildItem
-          Get-ChildItem -Path C:\Users
-          Get-ChildItem -Path "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build"
-
-      - name: Apply Windows build workaround
-        shell: bash
-        run: sed -i -e 's/add_library(IFCA SHARED/add_library(IFCA STATIC/g' CMakeLists.txt
-
       - name: List presets
         run: cmake --list-presets=all .
 
-      - name: Make preset
+      - name: Build all
         shell: cmd
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"
           git clone https://github.com/doctest/doctest.git
           cd doctest
           mkdir out
