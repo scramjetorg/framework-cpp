@@ -21,18 +21,19 @@ struct MessageLogger {
                   const std::string& time, T&& message) {
     switch (lvl) {
       case LogLvl::debug:
-        Logger::GetInstance()->debug(line, func, time,
+        LoggerImpl::GetInstance().debug(line, func, time,
                                      std::forward<T>(message));
         break;
       case LogLvl::info:
-        Logger::GetInstance()->info(line, func, time, std::forward<T>(message));
+        LoggerImpl::GetInstance().info(line, func, time,
+                                        std::forward<T>(message));
         break;
       case LogLvl::warning:
-        Logger::GetInstance()->warning(line, func, time,
+        LoggerImpl::GetInstance().warning(line, func, time,
                                        std::forward<T>(message));
         break;
       case LogLvl::error:
-        Logger::GetInstance()->error(line, func, time,
+        LoggerImpl::GetInstance().error(line, func, time,
                                      std::forward<T>(message));
         break;
       default:

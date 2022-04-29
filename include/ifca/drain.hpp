@@ -14,9 +14,9 @@ class DrainState {
  public:
   explicit DrainState(unsigned int max_parallel);
   DrainState(const DrainState&) = delete;
-  DrainState(DrainState&&);
+  DrainState(DrainState&&) noexcept;
   DrainState& operator=(const DrainState&) = delete;
-  DrainState& operator=(DrainState&&);
+  DrainState& operator=(DrainState&&) noexcept;
   ~DrainState() = default;
 
   bool drainOccured();

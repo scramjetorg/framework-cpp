@@ -17,14 +17,14 @@ DrainState::DrainState(unsigned int max_parallel)
   drained_promise_.reset();
 }
 
-DrainState::DrainState(DrainState&& other)
+DrainState::DrainState(DrainState&& other) noexcept
     : max_parallel_(std::move(other.max_parallel_)),
       drained_promise_(std::move(other.drained_promise_)),
       drained_sfuture_(std::move(other.drained_sfuture_)),
       processing_chunks_count_(other.processing_chunks_count_.load()),
       read_chunks_count_(other.read_chunks_count_.load()) {}
 
-DrainState& DrainState::operator=(DrainState&& other) {
+DrainState& DrainState::operator=(DrainState&& other) noexcept {
   max_parallel_ = std::move(other.max_parallel_);
   drained_promise_ = std::move(other.drained_promise_);
   drained_sfuture_ = std::move(other.drained_sfuture_);

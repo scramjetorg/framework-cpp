@@ -34,7 +34,11 @@
     {
       "name": "x64-release",
       "displayName": "x64 Release",
-      "inherits": "x64-debug",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -56,7 +60,11 @@
     {
       "name": "x86-release",
       "displayName": "x86 Release",
-      "inherits": "x86-debug",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }

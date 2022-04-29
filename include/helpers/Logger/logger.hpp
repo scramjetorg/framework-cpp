@@ -9,7 +9,7 @@
 #define LOG_LEVEL_NONE 0
 
 #include "emptyLogger.hpp"
-#include "logMessage.hpp"
+#include "messageLogger.hpp"
 #include "time.hpp"
 
 #if LOG_LVL >= LOG_LEVEL_DEBUG

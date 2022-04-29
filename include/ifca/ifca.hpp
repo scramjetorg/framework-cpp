@@ -13,6 +13,7 @@
 #include "ifca/maxParallel.hpp"
 #include "ifca/transform/isTransformExpression.hpp"
 #include "ifca/types.hpp"
+
 #include "transformChain.hpp"
 
 namespace ifca {
@@ -22,17 +23,45 @@ class IfcaImpl {
  public:
   using input_type = In;
   using output_type = Out;
-  using transforms_type = std::tuple<TransformChain...>;
 
   using chunk_promise = typename std::promise<output_type>;
   using chunk_future = typename std::future<output_type>;
 
   explicit IfcaImpl(unsigned int max_parallel = maxParallel())
       : drain_state_(max_parallel), ended_(false) {
+    LOG_INFO() << "Ifca default constructor";
     std::promise<void> first_processing_promise;
     first_processing_promise.set_value();
     last_processing_future_ = first_processing_promise.get_future();
   };
+
+  template <typename Input, typename Output, typename... Transforms,
+            typename = std::enable_if_t<std::is_same_v<
+                std::tuple<Transforms...>, std::tuple<TransformChain...>>>>
+  explicit IfcaImpl(IfcaImpl<Input, Output, Transforms...>&& ifca)
+      : transforms_(std::move(ifca.transforms_)),
+        drain_state_(std::move(ifca.drain_state_)),
+        last_processing_future_(std::move(ifca.last_processing_future_)),
+        ended_(std::move(ifca.ended_)) {
+    LOG_INFO() << "Ifca move constructor";
+  }
+
+  template <typename Input, typename Output, typename... Transforms,
+            typename Transform>
+  explicit IfcaImpl(IfcaImpl<Input, Output, Transforms...>&& ifca,
+                    Transform&& transform)
+      : transforms_(detail::ForwardTransformChain(std::move(ifca.transforms_),
+                                                  FWD(transform))),
+        drain_state_(std::move(ifca.drain_state_)),
+        last_processing_future_(std::move(ifca.last_processing_future_)),
+        ended_(std::move(ifca.ended_)) {
+    LOG_INFO() << "Ifca move with transform constructor";
+  }
+
+  IfcaImpl(const IfcaImpl&) = delete;
+  IfcaImpl(IfcaImpl&&) = default;
+  IfcaImpl& operator=(const IfcaImpl&) = delete;
+  IfcaImpl& operator=(IfcaImpl&&) = delete;
 
   ~IfcaImpl() {
     if (!ended_) end();
@@ -58,10 +87,10 @@ class IfcaImpl {
     last_processing_future_ = std::async(
         std::launch::async,
         [this](Input&& chunk, std::future<void>&& previous_processing_future) {
-          if constexpr ((std::tuple_size_v<transforms_type>) > 0) {
+          if constexpr (sizeof...(TransformChain) > 0) {
             runTransforms(
                 FWD(chunk), previous_processing_future,
-                std::make_index_sequence<std::tuple_size<transforms_type>{}>{});
+                std::make_index_sequence<sizeof...(TransformChain)>{});
           } else {
             onResolve(FWD(chunk), previous_processing_future);
           }
@@ -93,16 +122,17 @@ class IfcaImpl {
   template <typename Transform, typename Enable = std::enable_if_t<
                                     is_transform_expression_v<Transform>>>
   auto addTransform(Transform&& transform) {
-    if constexpr ((std::tuple_size_v<transforms_type>) > 0)
+    if constexpr ((sizeof...(TransformChain)) > 0)
       return IfcaImpl<input_type, typename Transform::output_type,
                       TransformChain..., Transform>(std::move(*this),
                                                     FWD(transform));
     else
       return IfcaImpl<typename Transform::input_type,
-                      typename Transform::output_type, TransformChain...,
-                      Transform>(std::move(*this), FWD(transform));
+                      typename Transform::output_type, Transform>(
+          std::move(*this), FWD(transform));
   }
 
+  bool ended() { return ended_; }
   void end() {
     if (ended_) throw MultipleEnd();
     ended_ = true;
@@ -115,14 +145,6 @@ class IfcaImpl {
   friend class IfcaImpl;
 
  protected:
-  template <typename Ifca, typename Transform>
-  explicit IfcaImpl(Ifca&& ifca, Transform&& transform)
-      : transforms_(detail::ForwardTransformChain(FWD(ifca.transforms_),
-                                                  FWD(transform))),
-        drain_state_(FWD(ifca.drain_state_)),
-        last_processing_future_(FWD(ifca.last_processing_future_)),
-        ended_(FWD(ifca.ended_)) {}
-
   void setReadEnd(chunk_promise& promise) {
     try {
       throw ReadEnd();
@@ -168,7 +190,7 @@ class IfcaImpl {
   }
 
  private:
-  transforms_type transforms_;
+  std::tuple<TransformChain...> transforms_;
 
   DrainState drain_state_;
   std::future<void> last_processing_future_;

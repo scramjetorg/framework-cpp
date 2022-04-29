@@ -13,26 +13,13 @@ set(testExecutable "IFCA_tests")
 
 add_executable(${testExecutable} "")
 target_sources(${testExecutable} PUBLIC
-    "ifca/transform/each.test.cpp"
-    "ifca/transform/filter.test.cpp"
-    "ifca/transform/from.test.cpp"
-    "ifca/transform/into.test.cpp"
-    "ifca/transform/map.test.cpp"
-    "ifca/transform/race.test.cpp"
-    "ifca/transform/reduce.test.cpp"
-    "ifca/transform/run.test.cpp"
-    
-    "ifca/drain.test.cpp"
-    "ifca/ifca.test.cpp"
-    
-    "scenarios/ifca.test.cpp"
-    "scenarios/testData.hpp"
-
-    "streams/dataStream.test.cpp"
-
     "main.cpp"
     "testClass.hpp"
 )
+
+#add_subdirectory(ifca)
+#add_subdirectory(scenarios)
+add_subdirectory(streams)
 
 target_link_libraries(${testExecutable} PUBLIC IFCA Threads::Threads doctest::doctest)
 target_compile_features(${testExecutable} PRIVATE cxx_std_17 )

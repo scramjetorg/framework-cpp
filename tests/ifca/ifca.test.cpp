@@ -26,6 +26,7 @@ TEST_CASE("Ifca implementation") {
 
   SUBCASE("Empty Ifca") {
     auto ifca = Ifca<int>();
+    REQUIRE(is_ifca_interface_v<IfcaImpl<int, int>>);
     REQUIRE(is_ifca_interface_v<decltype(ifca)>);
 
     ifca.write(testOddValue);
