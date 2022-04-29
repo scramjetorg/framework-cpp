@@ -13,6 +13,7 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 set(LOG_LVL LOG_LEVEL_NONE CACHE STRING  "Logging level used <LOG_LEVEL_ALL|LOG_LEVEL_DEBUG|LOG_LEVEL_INFO|LOG_LEVEL_WARNING|LOG_LEVEL_ERROR|LOG_LEVEL_NONE>" )
 set(LOG_TYPE LOG_TYPE_CONSOLE CACHE STRING "Logging output used <LOG_TYPE_CONSOLE|LOG_TYPE_FILE>")
 add_compile_definitions(LOG_LVL=${LOG_LVL} LOG_TYPE=${LOG_TYPE})
@@ -23,7 +24,7 @@ option(BUILD_TESTING "Enable testing" OFF)
 
 add_library(IFCA SHARED "")
 
-set_target_properties(IFCA PROPERTIES CXX_STANDARD 17) 
+set_target_properties(IFCA PROPERTIES CXX_STANDARD 17)
 
 add_subdirectory(include)
 add_subdirectory(src)
