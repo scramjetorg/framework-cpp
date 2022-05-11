@@ -24,7 +24,6 @@ happening in this repository. There is also [JavaScript/TypeScript](https://gith
 
 **We are open to your feedback!** We encourage you to report issues with any ideas, suggestions and features you would like to see in this version. You can also upvote (`+1`) existing ones to show us the direction we should take in developing Scramjet Framework.
 
-
 ## Table of contents
 
 - [Installation](#installation)
@@ -60,119 +59,43 @@ Please refer to [Development Setup](#development-setup) section on how to setup 
 
 ## Development Setup
 
-// TBD (below previous setup instructions)
-
-### Adjust the template to your needs
-
-- Use this repo [as a template](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template).
-- Replace all occurrences of "Greeter" in the relevant CMakeLists.txt with the name of your project
-  - Capitalization matters here: `Greeter` means the name of the project, while `greeter` is used in file names.
-  - Remember to rename the `include/greeter` directory to use your project's lowercase name and update all relevant `#include`s accordingly.
-- Replace the source files with your own
-- For header-only libraries: see the comments in [CMakeLists.txt](CMakeLists.txt)
-- Add [your project's codecov token](https://docs.codecov.io/docs/quick-start) to your project's github secrets under `CODECOV_TOKEN`
-- Happy coding!
-
-Eventually, you can remove any unused files, such as the standalone directory or irrelevant github workflows for your project.
-Feel free to replace the License with one suited for your project.
-
-To cleanly separate the library and subproject code, the outer `CMakeList.txt` only defines the library itself while the tests and other subprojects are self-contained in their own directories.
-During development it is usually convenient to [build all subprojects at once](#build-everything-at-once).
-
-### Build and run the standalone target
-
-Use the following command to build the library.
+1\. Clone this repo:
 
 ```bash
-cmake -B build/
-cmake --clean-first --build build
+git@github.com:scramjetorg/framework-cpp.git
 ```
 
-### Install C++17 and other prerequisites
+2\. List presets available on your OS:
 
 ```bash
-sudo apt install gcc-10 gcc-10-base gcc-10-doc g++-10 libstdc++-10-dev libstdc++-10-doc
-sudo apt install gdb gdb-doc
+cmake --list-presets=all .
 ```
 
-### Build and run test suite
-
-Use the following commands from the project's root directory to run the test suite.
+It will result with a similar list:
 
 ```bash
-cmake -S test -B build/test
-cmake --build build/test
-CTEST_OUTPUT_ON_FAILURE=1 cmake --build build/test --target test
+Available configure presets:
 
-# or simply call the executable:
-./build/test/GreeterTests
+  "linux-debug"         - Linux Debug
+  "linux-test-coverage" - Linux Test Coverage
+  "linux-release"       - Linux Release
 ```
 
-To collect code coverage information, run CMake with the `-DENABLE_TEST_COVERAGE=1` option.
-
-### Run clang-format
-
-Use the following commands from the project's root directory to check and fix C++ and CMake source style.
-This requires _clang-format_, _cmake-format_ and _pyyaml_ to be installed on the current system.
+3\. Build `make` according to specific preset:
 
 ```bash
-cmake -S test -B build/test
-
-# view changes
-cmake --build build/test --target format
-
-# apply changes
-cmake --build build/test --target fix-format
+cmake --preset linux-debug
 ```
 
-See [Format.cmake](https://github.com/TheLartians/Format.cmake) for details.
-
-### Build the documentation
-
-The documentation is automatically built and [published](https://thelartians.github.io/ModernCppStarter) whenever a [GitHub Release](https://help.github.com/en/github/administering-a-repository/managing-releases-in-a-repository) is created.
-To manually build documentation, call the following command.
+4\. Build project using `make` file from previous step:
 
 ```bash
-cmake -S documentation -B build/doc
-cmake --build build/doc --target GenerateDocs
-# view the docs
-open build/doc/doxygen/html/index.html
+cd out/build/linux-debug/
+cmake --build .
 ```
 
-To build the documentation locally, you will need Doxygen, jinja2 and Pygments on installed your system.
-
-### Build everything at once
-
-The project also includes an `all` directory that allows building all targets at the same time.
-This is useful during development, as it exposes all subprojects to your IDE and avoids redundant builds of the library.
+5\. Run tests (only debug presets)
 
 ```bash
-cmake -S all -B build
-cmake --build build
-
-# run tests
-./build/test/IFCATests
-# format code
-cmake --build build --target fix-format
-# build docs
-cmake --build build --target GenerateDocs
+./tests/IFCA_tests
 ```
-
-### Additional tools
-
-The test and standalone subprojects include the [tools.cmake](cmake/tools.cmake) file which is used to import additional tools on-demand through CMake configuration arguments.
-The following are currently supported.
-
-#### Sanitizers
-
-Sanitizers can be enabled by configuring CMake with `-DUSE_SANITIZER=<Address | Memory | MemoryWithOrigins | Undefined | Thread | Leak | 'Address;Undefined'>`.
-
-#### Static Analyzers
-
-Static Analyzers can be enabled by setting `-DUSE_STATIC_ANALYZER=<clang-tidy | iwyu | cppcheck>`, or a combination of those in quotation marks, separated by semicolons.
-By default, analyzers will automatically find configuration files such as `.clang-format`.
-Additional arguments can be passed to the analyzers by setting the `CLANG_TIDY_ARGS`, `IWYU_ARGS` or `CPPCHECK_ARGS` variables.
-
-#### Ccache
-
-Ccache can be enabled by configuring with `-DUSE_CCACHE=<ON | OFF>`.
