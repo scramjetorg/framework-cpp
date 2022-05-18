@@ -1,6 +1,6 @@
 
 option(ENABLE_TEST_COVERAGE "Enable test coverage" OFF)
-option(TEST_INSTALLED_VERSION "Test the version found by find_package" OFF)
+#option(TEST_INSTALLED_VERSION "Test the version found by find_package" OFF)
 
 find_package(doctest REQUIRED)
 find_package(Threads REQUIRED)
@@ -17,8 +17,8 @@ target_sources(${testExecutable} PUBLIC
     "testClass.hpp"
 )
 
-#add_subdirectory(ifca)
-#add_subdirectory(scenarios)
+add_subdirectory(ifca)
+add_subdirectory(scenarios)
 add_subdirectory(streams)
 
 target_link_libraries(${testExecutable} PUBLIC IFCA Threads::Threads doctest::doctest)

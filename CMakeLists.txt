@@ -44,3 +44,7 @@ if(BUILD_TESTING OR ENABLE_TEST_COVERAGE)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+if(BUILD_KM3)
+    add_subdirectory(KM3)
+endif()

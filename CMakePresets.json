@@ -1,5 +1,5 @@
 ﻿{
-    "version": 3,
+  "version": 3,
   "configurePresets": [
     {
       "name": "windows-base",
@@ -32,6 +32,20 @@
       }
     },
     {
+      "name": "km3-debug",
+      "displayName": "KM3 Debug",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_KM3": true,
+        "LOG_LVL": "LOG_LEVEL_ALL"
+      }
+    },
+    {
       "name": "x64-release",
       "displayName": "x64 Release",
       "inherits": "windows-base",
@@ -41,6 +55,19 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "km3-release",
+      "displayName": "KM3 Release",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_KM3": true
       }
     },
     {
@@ -99,7 +126,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_TESTING": true,
         "LOG_LVL": "LOG_LEVEL_ALL",
-        "ENABLE_TEST_COVERAGE":  true
+        "ENABLE_TEST_COVERAGE": true
       }
     },
     {
@@ -108,6 +135,25 @@
       "inherits": "linux-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "km3-debug-linux",
+      "displayName": "KM3 Debug",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_KM3": true,
+        "LOG_LVL": "LOG_LEVEL_ALL"
+      }
+    },
+    {
+      "name": "km3-linux",
+      "displayName": "KM3 Release",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_KM3": true
       }
     },
     {

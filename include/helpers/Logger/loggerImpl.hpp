@@ -93,8 +93,6 @@ class LoggerImpl {
   };
 
  private:
-  //static Logger* instance_;
-  //static std::mutex instance_mutex_;
   std::mutex m_;
 
 #if LOG_TYPE == LOG_TYPE_FILE

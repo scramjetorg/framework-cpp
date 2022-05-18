@@ -7,6 +7,5 @@ target_sources(IFCA PUBLIC
 	futureIsReady.hpp
 	FWD.hpp
 	isStlContainer.hpp
-	threadList.hpp
 	timer.hpp
 )

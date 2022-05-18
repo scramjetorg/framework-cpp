@@ -3,17 +3,19 @@
 
 #include <tuple>
 #include <type_traits>
+#include <list>
+#include <future>
+#include <mutex>
+#include <atomic>
 
 #include "helpers/FWD.hpp"
 #include "helpers/Logger/logger.hpp"
 #include "helpers/asyncForwarder.hpp"
-#include "helpers/threadList.hpp"
 #include "ifca/drain.hpp"
 #include "ifca/exceptions.hpp"
 #include "ifca/maxParallel.hpp"
 #include "ifca/transform/isTransformExpression.hpp"
 #include "ifca/types.hpp"
-
 #include "transformChain.hpp"
 
 namespace ifca {
@@ -42,7 +44,7 @@ class IfcaImpl {
       : transforms_(std::move(ifca.transforms_)),
         drain_state_(std::move(ifca.drain_state_)),
         last_processing_future_(std::move(ifca.last_processing_future_)),
-        ended_(std::move(ifca.ended_)) {
+        ended_(ifca.ended_.load()) {
     LOG_INFO() << "Ifca move constructor";
   }
 
@@ -54,7 +56,7 @@ class IfcaImpl {
                                                   FWD(transform))),
         drain_state_(std::move(ifca.drain_state_)),
         last_processing_future_(std::move(ifca.last_processing_future_)),
-        ended_(std::move(ifca.ended_)) {
+        ended_(ifca.ended_.load()) {
     LOG_INFO() << "Ifca move with transform constructor";
   }
 
@@ -72,50 +74,62 @@ class IfcaImpl {
   template <typename Input = input_type>
   std::enable_if_t<!std::is_void_v<Input>, drain_sfuture> write(Input&& chunk) {
     if (ended_) throw WriteAfterEnd();
-
     // TODO: check how much is processing then create
-    if (read_ahead_promises_.empty()) {
-      auto& promise = processing_promises_.emplace_back(chunk_promise());
-      read_futures_.emplace_back(promise.get_future());
+    if (readAheadPromisesEmpty()) {
+      auto promise = chunk_promise();
+      auto future = promise.get_future();
+      promises_mutex.lock();
+      processing_promises_.push_back(std::move(promise));
+      promises_mutex.unlock();
+      futures_mutex.lock();
+      read_futures_.push_back(std::move(future));
+      futures_mutex.unlock();
     } else {
-      auto read_ahead_promise = std::move(read_ahead_promises_.front());
-      read_ahead_promises_.pop_front();
+      promises_mutex.lock();
+      auto& read_ahead_promise = read_ahead_promises_.front();
       processing_promises_.push_back(std::move(read_ahead_promise));
+      read_ahead_promises_.pop_front();
+      promises_mutex.unlock();
     }
 
     drain_state_.ChunkStartedProcessing();
+    LOG_DEBUG() << "write(): " << chunk << "add " << &chunk;
     last_processing_future_ = std::async(
         std::launch::async,
-        [this](Input&& chunk, std::future<void>&& previous_processing_future) {
+        [&](auto&& chunk, std::future<void>&& previous_processing_future) {
+          LOG_DEBUG() << "Run Transforms: " << chunk << "add " << &chunk;
           if constexpr (sizeof...(TransformChain) > 0) {
             runTransforms(
-                FWD(chunk), previous_processing_future,
+                FWD(chunk), std::move(previous_processing_future),
                 std::make_index_sequence<sizeof...(TransformChain)>{});
           } else {
-            onResolve(FWD(chunk), previous_processing_future);
+            onResolve(FWD(chunk), std::move(previous_processing_future));
           }
         },
-        async_forwarder<Input>(chunk), std::move(last_processing_future_));
-
+        FWD(chunk), std::move(last_processing_future_));
     return drain_state_;
   }
 
   template <typename Input = input_type>
   std::enable_if_t<!std::is_void_v<Input>, chunk_future> read() {
     drain_state_.ChunkRead();
-    if (read_futures_.empty()) {
+    if (readFuturesEmpty()) {
       if (ended_) {
         auto end_promise = chunk_promise();
         setReadEnd(end_promise);
         return end_promise.get_future();
       }
-      auto& read_ahead_promise =
-          read_ahead_promises_.emplace_back(chunk_promise());
-      return read_ahead_promise.get_future();
+      auto read_ahead_promise = chunk_promise();
+      auto future = read_ahead_promise.get_future();
+      promises_mutex.lock();
+      read_ahead_promises_.push_back(std::move(read_ahead_promise));
+      promises_mutex.unlock();
+      return future;
     }
+    futures_mutex.lock();
     auto read = std::move(read_futures_.front());
     read_futures_.pop_front();
-
+    futures_mutex.unlock();
     return read;
   }
 
@@ -134,11 +148,14 @@ class IfcaImpl {
 
   bool ended() { return ended_; }
   void end() {
+    LOG_DEBUG() << "end()";
     if (ended_) throw MultipleEnd();
     ended_ = true;
+    promises_mutex.lock();
     for (auto&& read_ahead : read_ahead_promises_) {
       setReadEnd(read_ahead);
     }
+    promises_mutex.unlock();
   }
 
   template <typename, typename, typename...>
@@ -155,21 +172,21 @@ class IfcaImpl {
 
   template <typename Chunk, std::size_t... Is>
   void runTransforms(Chunk&& chunk,
-                     std::future<void>& previous_processing_future,
+                     std::future<void>&& previous_processing_future,
                      std::index_sequence<Is...>) {
-    runTransformsImpl(FWD(chunk), previous_processing_future,
+    runTransformsImpl(FWD(chunk), std::move(previous_processing_future),
                       std::get<Is>(transforms_)...);
   }
 
   template <typename Chunk, typename FirstTransform,
             typename... RestOfTransforms>
   void runTransformsImpl(Chunk&& chunk,
-                         std::future<void>& previous_processing_future,
+                         std::future<void>&& previous_processing_future,
                          FirstTransform&& firstTransform,
                          RestOfTransforms&&... restOfTransforms) {
     auto&& onResolveCallback = [&previous_processing_future,
                                 this](auto&& resolvedValue) {
-      onResolve(FWD(resolvedValue), previous_processing_future);
+      onResolve(FWD(resolvedValue), std::move(previous_processing_future));
     };
     auto&& onRejectCallback = [this] { onReject(); };
     firstTransform(FWD(chunk), FWD(onResolveCallback), FWD(onRejectCallback),
@@ -177,26 +194,40 @@ class IfcaImpl {
   }
 
   template <typename Chunk>
-  void onResolve(Chunk&& chunk, std::future<void>& previous_processing_future) {
+  void onResolve(Chunk&& chunk,
+                 std::future<void>&& previous_processing_future) {
     previous_processing_future.wait();
-    auto&& result_promise = processing_promises_.take_front();
+    promises_mutex.lock();
+    auto& result_promise = processing_promises_.front();
     result_promise.set_value(FWD(chunk));
+    processing_promises_.pop_front();
+    promises_mutex.unlock();
     drain_state_.ChunkFinishedProcessing();
   }
 
   void onReject() {
-    // TODO: remove one of processing_promises_?
     drain_state_.ChunkFinishedProcessing();
+  }
+  bool readAheadPromisesEmpty() {
+    std::lock_guard<std::mutex> lck(promises_mutex);
+    return read_ahead_promises_.empty();
+  }
+  bool readFuturesEmpty() {
+    std::lock_guard<std::mutex> lck(futures_mutex);
+    return read_futures_.empty();
   }
 
  private:
   std::tuple<TransformChain...> transforms_;
 
   DrainState drain_state_;
+  // std::mutex async_mutex;
   std::future<void> last_processing_future_;
-  bool ended_;
-  ThreadList<chunk_promise> processing_promises_;
+  std::atomic_bool ended_;
+  std::mutex promises_mutex;
+  std::list<chunk_promise> processing_promises_;
   std::list<chunk_promise> read_ahead_promises_;
+  std::mutex futures_mutex;
   std::list<chunk_future> read_futures_;
 };
 

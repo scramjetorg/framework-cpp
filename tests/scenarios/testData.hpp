@@ -39,7 +39,7 @@ struct TestData<int> {
 
   auto testSequence() { return std::vector<int>{1, 2, 1, 3, 2, 4}; }
   auto modifyData() {
-    return [](int& chunk) -> int { return chunk + 1; };
+    return [](int chunk) -> int { return chunk + 1; };
   }
   auto modifiedTestSequence() { return std::vector<int>{2, 3, 2, 4, 3, 5}; }
   auto filterData() {
