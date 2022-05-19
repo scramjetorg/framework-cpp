@@ -14,7 +14,7 @@ Scramjet Framework C++
     <img src="https://assets.scramjet.org/images/framework-logo-256.svg" width="420" alt="Scramjet Framework">
 </p>
 
-Scramjet is a simple reactive stream programming framework. The code is written by chaining functions that transform the streamed data, including well known map, filter and reduce.
+Scramjet is a simple reactive stream programming framework. The code is written by chaining functions that transform the streamed data, including well known map, filter and each.
 
 The main advantage of Scramjet is running asynchronous operations on your data streams concurrently. It allows you to perform the transformations both synchronously and asynchronously by using the same API - so now you can "map" your stream from whatever source and call any number of API's consecutively.
 
@@ -35,11 +35,86 @@ happening in this repository. There is also [JavaScript/TypeScript](https://gith
 
 ## Installation
 
-// TBD
+To create Ifca library clone framework-cpp repository and simply run in root directory (requires minimum 3.19 version of cmake):
+
+```bash
+cmake --preset linux-release
+```
+
+Builded library can be find in:
+./out/build/linux-release/IFCA.so
 
 ## Usage
 
-// TBD
+Write and read chunks:
+      
+```C++
+std::shared_future<void> write(Chunk chunk)
+```
+- writes chunk of type Chunk to ifca algorithm (must be the same type as input type of first transform). Returns drain state- if we've surpressed [maxParallel] chunk processed, it will return shared_future to wait for draining stream, otherwise returns already set shared_future.
+
+```C++
+std::future<OutputType> read()
+```
+- Returns future of processed chunk of type OutputType- type returned by last transform in chain. Future is set after transformations are finished.
+
+Transform chunks:
+
+To add Transform to processing chain use:
+```C++
+ addTransform(Transform)
+```
+Transforms accept any callable object having operator(ChunkType value) overloaded- functions, member functions, lambdas, std::function, functional objects.
+
+Possible values are:
+```C++
+ each(Callable function)
+```
+- Calls Callable(chunk) and passes result of callable further. 
+```C++
+ map(Callable function)
+```
+- Calls Callable(chunk) and passes same chunk further without taking result of callable.
+```C++
+ filter(Predicate function)
+```
+- Calls Predicate(chunk)- must return bool value. If predicate is true passes chunk further, otherwise filters out chunk from flow.
+
+Example usage:
+```C++
+  // for readability only
+  using namespace ifca; 
+
+  auto incrementByOne = [](int chunk) {
+    return chunk + 1;
+  };
+  auto showChunk = [](int chunk) {
+    std::cout << chunk << "\n";
+    return chunk;
+  };
+  auto filterOddChunk = [](int chunk){
+      return (chunk % 2 == 0);
+  }
+
+  const unsigned int maxParallel = 8;
+  
+  auto ifca = Ifca().addTransform(map(incrementByOne)).addTransform(each(showChunk)).addTransform(filter(filterOddChunk));
+
+  auto inputReader = std::async(std::launch::async, [&]() {
+    int c;
+    while (std::cin >> c) {
+      ifca.write(c).wait();
+    }
+    ifca.end();
+  });
+
+  auto outputReader = std::async(std::launch::async, [&]() {
+      while (true) 
+        std::cout << ifca.read().get();
+  });
+  outputReader.wait();
+
+```
 
 ## Requesting Features
 
