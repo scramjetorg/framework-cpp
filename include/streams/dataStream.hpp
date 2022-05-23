@@ -16,7 +16,6 @@
 #include "ifca/transform/isTransformExpression.hpp"
 #include "ifca/transform/map.hpp"
 #include "ifca/transform/reduce.hpp"
-#include "ifca/types.hpp"
 
 namespace stream {
 
@@ -143,8 +142,8 @@ class DataStream {
     outputWriter = std::async(std::launch::async, [&, this]() -> void {
       LOG_DEBUG() << "<--------outputWriter";
       while (!ifca.ended()) {
-        using value_type = typename std::decay_t<Container>::value_type;
-        auto&& value = ifca.read<value_type>().get();
+        //using value_type = typename std::decay_t<Container>::value_type;
+        auto&& value = ifca.read().get();
         LOG_DEBUG() << "outputWriter val: " << value;
         container.insert(container.cend(), value);
       }
@@ -195,7 +194,7 @@ class DataStream {
         // LOG_DEBUG() << "dist: " << std::distance(container.begin(), it);
         // waitIfCorked();
         // if (*streamingFinished.get()) break;
-        ifca::drain_sfuture drain = ifca.write(FWD(*it));
+        auto drain = ifca.write(FWD(*it));
         drain.wait();
         LOG_DEBUG() << *it;
       }

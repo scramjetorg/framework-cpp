@@ -19,6 +19,7 @@ class MapTransform
   using output_type = typename function_traits<Function>::return_type;
 
   explicit MapTransform(Function& function) : func_(function) {}
+  virtual ~MapTransform() = default;
 
   template <typename Chunk, typename ResolveCallback, typename RejectCallback,
             typename NextTransform, typename... TransformChain>

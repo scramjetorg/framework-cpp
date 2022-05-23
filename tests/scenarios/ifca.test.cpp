@@ -14,7 +14,6 @@
 #include "ifca/exceptions.hpp"
 #include "ifca/transform/filter.hpp"
 #include "ifca/transform/map.hpp"
-#include "ifca/types.hpp"
 #include "testData.hpp"
 
 namespace ifca {
@@ -25,6 +24,7 @@ namespace ifca {
       test_utils::TestData<test_utils::TestClass, std::string>
 
 const unsigned int kMaxParallel = 4;
+using drain_sfuture = std::shared_future<void>;
 
 TEST_CASE_TEMPLATE("IFCA- Basic tests", TestData, TestTypes) {
   using in = typename TestData::input;

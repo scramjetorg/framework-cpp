@@ -19,6 +19,7 @@ class EachTransform
   using output_type = input_type;
 
   explicit EachTransform(Function& function) : func_(function) {}
+  virtual ~EachTransform() = default;
 
   template <typename Chunk, typename ResolveCallback, typename RejectCallback,
             typename NextTransform, typename... TransformChain>

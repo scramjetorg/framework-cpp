@@ -1,13 +1,14 @@
+#include "ifca/ifca.hpp"
+
 #include <doctest/doctest.h>
 
 #include <functional>
 
 #include "../testClass.hpp"
 #include "helpers/Logger/logger.hpp"
-#include "ifca/ifca.hpp"
 #include "ifca/isIfcaInterface.hpp"
-#include "ifca/transform/map.hpp"
 #include "ifca/transform/filter.hpp"
+#include "ifca/transform/map.hpp"
 
 namespace ifca {
 
@@ -62,11 +63,12 @@ TEST_CASE("Ifca implementation") {
     CHECK_EQ(testOddValue + 1, res);
   }
 
-  //SUBCASE("Transform returning reference") {
-  //  using TestClass = test_utils::TestClass;
-  //  auto tc = TestClass("TestClass");
-  //  auto& tcRef = tc;
-  //  auto passUnchanged = [](TestClass& chunk) -> TestClass& { return chunk; };
+  // SUBCASE("Transform returning reference") {
+  //   using TestClass = test_utils::TestClass;
+  //   auto tc = TestClass("TestClass");
+  //   auto& tcRef = tc;
+  //   auto passUnchanged = [](TestClass& chunk) -> TestClass& { return chunk;
+  //   };
 
   //  SUBCASE("Empty ifca") {
   //    auto ifca = Ifca<TestClass&>();

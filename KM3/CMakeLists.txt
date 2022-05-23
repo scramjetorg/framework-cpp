@@ -2,7 +2,7 @@ add_executable(KM3 "")
 
 target_sources(KM3 PUBLIC "main.cpp")
 
-target_link_libraries(KM3 PUBLIC IFCA Threads::Threads)
+target_link_libraries(KM3 INTERFACE IFCA PUBLIC Threads::Threads)
 target_compile_features(KM3 PRIVATE cxx_std_17 )
 
 target_include_directories(KM3 PUBLIC 
