@@ -15,7 +15,6 @@
 #include "ifca/transform/filter.hpp"
 #include "ifca/transform/isTransformExpression.hpp"
 #include "ifca/transform/map.hpp"
-#include "ifca/transform/reduce.hpp"
 
 namespace stream {
 
