@@ -26,23 +26,18 @@ happening in this repository. There is also [JavaScript/TypeScript](https://gith
 
 ## Table of contents
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Requesting features](#requesting-features)
-- [Reporting bugs](#reporting-bugs)
-- [Contributing](#contributing)
-- [Development Setup](#development-setup)
+- [Scramjet Framework C++](#scramjet-framework-c)
+  - [Table of contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Requesting Features](#requesting-features)
+  - [Reporting bugs](#reporting-bugs)
+  - [Contributing](#contributing)
+  - [Development Setup](#development-setup)
 
 ## Installation
 
-To create Ifca library clone framework-cpp repository and simply run in root directory (requires minimum 3.19 version of cmake):
-
-```bash
-cmake --preset linux-release
-```
-
-Builded library can be find in:
-./out/build/linux-release/IFCA.so
+To use Ifca interface library just clone framework-cpp repository and add include directory to your project then simply include headers of your need.
 
 ## Usage
 
