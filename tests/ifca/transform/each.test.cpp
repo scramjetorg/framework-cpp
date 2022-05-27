@@ -18,9 +18,9 @@ TEST_CASE("EachTransform") {
   auto rejectedFunc = [] {};
 
   std::string testValue = "10";
-  int expectedResult = 11;
-  int result = 0;
-  auto resolvedFunc = [&result](int chunk) { result = chunk; };
+  std::string expectedResult = "10";
+  std::string result;
+  auto resolvedFunc = [&result](std::string& chunk) { result = chunk; };
   auto eachTransform = each(stoiAndIncrement);
   REQUIRE(is_transform_expression_v<decltype(eachTransform)>);
 
@@ -32,7 +32,7 @@ TEST_CASE("EachTransform") {
 
   SUBCASE("Chunk passed to next transform") {
     auto nextPassed = false;
-    auto nextTransform = [&nextPassed](int chunk,
+    auto nextTransform = [&nextPassed](std::string& chunk,
                                        decltype(resolvedFunc) resolve,
                                        decltype(rejectedFunc)) {
       nextPassed = true;

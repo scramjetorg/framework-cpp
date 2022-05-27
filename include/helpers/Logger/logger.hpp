@@ -9,6 +9,7 @@
 #define LOG_LEVEL_NONE 0
 
 #include "emptyLogger.hpp"
+#include "messageLogger.hpp"
 #include "logMessage.hpp"
 #include "time.hpp"
 

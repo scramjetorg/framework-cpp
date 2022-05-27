@@ -31,6 +31,7 @@ class FilterTransform<
 
   explicit FilterTransform(Predicate& predicate, Deleter& deleter)
       : predicate_(predicate), deleter_(deleter){};
+  virtual ~FilterTransform() = default;
 
   template <typename Chunk, typename ResolveCallback, typename RejectCallback,
             typename NextTransform, typename... TransformChain>

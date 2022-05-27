@@ -26,6 +26,7 @@ struct TestClass {
       : name_(o.name_),
         copy_count_(o.copy_count_ + 1),
         move_count_(o.move_count_) {}
+
   TestClass& operator=(const TestClass& o) {
     name_ = o.name_;
     copy_count_ = o.copy_count_ + 1;
@@ -41,7 +42,7 @@ struct TestClass {
         move_count_(o.move_count_ + 1) {}
 
   TestClass& operator=(TestClass&& o) noexcept {
-    name_ = o.name_;
+    name_ = std::move(o.name_);
     copy_count_ = o.copy_count_;
     move_count_ = o.move_count_ + 1;
     return *this;

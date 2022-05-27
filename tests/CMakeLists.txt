@@ -1,6 +1,6 @@
 
 option(ENABLE_TEST_COVERAGE "Enable test coverage" OFF)
-option(TEST_INSTALLED_VERSION "Test the version found by find_package" OFF)
+#option(TEST_INSTALLED_VERSION "Test the version found by find_package" OFF)
 
 find_package(doctest REQUIRED)
 find_package(Threads REQUIRED)
@@ -13,28 +13,15 @@ set(testExecutable "IFCA_tests")
 
 add_executable(${testExecutable} "")
 target_sources(${testExecutable} PUBLIC
-    "ifca/transform/each.test.cpp"
-    "ifca/transform/filter.test.cpp"
-    "ifca/transform/from.test.cpp"
-    "ifca/transform/into.test.cpp"
-    "ifca/transform/map.test.cpp"
-    "ifca/transform/race.test.cpp"
-    "ifca/transform/reduce.test.cpp"
-    "ifca/transform/run.test.cpp"
-    
-    "ifca/drain.test.cpp"
-    "ifca/ifca.test.cpp"
-    
-    "scenarios/ifca.test.cpp"
-    "scenarios/testData.hpp"
-
-    "streams/dataStream.test.cpp"
-
     "main.cpp"
     "testClass.hpp"
 )
 
-target_link_libraries(${testExecutable} PUBLIC IFCA Threads::Threads doctest::doctest)
+add_subdirectory(ifca)
+add_subdirectory(scenarios)
+add_subdirectory(streams)
+
+target_link_libraries(${testExecutable} INTERFACE IFCA PUBLIC Threads::Threads doctest::doctest)
 target_compile_features(${testExecutable} PRIVATE cxx_std_17 )
 
 target_include_directories(${testExecutable} PUBLIC 
@@ -46,7 +33,7 @@ target_include_directories(${testExecutable} PUBLIC
     target_compile_options(${testExecutable} PUBLIC -Wall -Wpedantic -Wextra -Werror)
   elseif(MSVC)
     target_compile_options(${testExecutable} PUBLIC /W4 /WX /std:c++17)
-    target_compile_definitions(IFCA PUBLIC DOCTEST_CONFIG_USE_STD_HEADERS)
+    target_compile_definitions(IFCA  INTERFACE DOCTEST_CONFIG_USE_STD_HEADERS)
   endif()
 
 if(ENABLE_TEST_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")

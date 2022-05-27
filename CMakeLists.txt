@@ -22,25 +22,28 @@ add_compile_definitions(LOG_LVL=${LOG_LVL} LOG_TYPE=${LOG_TYPE})
 #option(TEST_INSTALLED_VERSION "Test the version found by find_package" OFF)
 option(BUILD_TESTING "Enable testing" OFF)
 
-add_library(IFCA SHARED "")
+add_library(IFCA INTERFACE)
 
-set_target_properties(IFCA PROPERTIES CXX_STANDARD 17)
+set_target_properties(IFCA PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 17)
 
 add_subdirectory(include)
-add_subdirectory(src)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-target_link_libraries(IFCA PRIVATE Threads::Threads)
+target_link_libraries(IFCA INTERFACE Threads::Threads)
 
-target_compile_options(IFCA PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
+target_compile_options(IFCA INTERFACE "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 target_include_directories(
-  IFCA PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  IFCA INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
               $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
 
 if(BUILD_TESTING OR ENABLE_TEST_COVERAGE)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(BUILD_KM3)
+    add_subdirectory(KM3)
 endif()

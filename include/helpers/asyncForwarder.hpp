@@ -26,10 +26,10 @@ class async_forwarder<T&> {
  public:
   async_forwarder(T& t) : val_(t) {}
   async_forwarder(async_forwarder const& other) = delete;
-  async_forwarder(async_forwarder&& other) : val_(other.val_) {}
+  async_forwarder(async_forwarder&& other) noexcept : val_(other.val_) {}
 
   operator T&() { return val_; }
-  operator T const &() const { return val_; }
+  operator T const&() const { return val_; }
 
  private:
   T& val_;
