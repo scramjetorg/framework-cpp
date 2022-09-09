@@ -94,6 +94,21 @@ TEST_CASE("FilterTransform") {
       CHECK(resolved);
       delete tcPass;
     }
+
+    SUBCASE("Chunk rejected before next transform") {
+      test_utils::TestClass* tcReject = new test_utils::TestClass("reject");
+      auto nextPassed = false;
+      auto nextTransform = [&nextPassed](test_utils::TestClass* chunk,
+                                         decltype(resolvedFunc) resolve,
+                                         decltype(rejectedFunc)) {
+        nextPassed = true;
+        resolve(chunk);
+      };
+      filterTransform(tcReject, resolvedFunc, rejectedFunc, nextTransform);
+      CHECK_FALSE(nextPassed);
+      CHECK_FALSE(resolved);
+      CHECK(rejected);
+    }
   }
 }
 

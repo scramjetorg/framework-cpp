@@ -90,7 +90,6 @@ class IfcaImpl {
     if (!ended_) end();
     last_processing_future_ = std::future<void>();
     if (!last_processing_future_.valid()) return;
-    last_processing_future_.wait();
   };
 
   template <typename Input = input_type>

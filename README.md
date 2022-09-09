@@ -169,3 +169,13 @@ cmake --build .
 ```bash
 ./tests/IFCA_tests
 ```
+
+5\. Run code coverage raport:
+
+```bash
+cmake --preset linux-test-coverage
+cd out/build/linux-test-coverage
+make IFCA_coverage
+```
+
+Raport will be under `out/build/linux-test-coverage/IFCA-coverage` folder, open `index.html` file to check specific results.

@@ -37,6 +37,16 @@ target_include_directories(${testExecutable} PUBLIC
   endif()
 
 if(ENABLE_TEST_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  target_compile_options(${testExecutable} PUBLIC -O0 -g -fprofile-arcs -ftest-coverage)
-  target_link_options(${testExecutable} PUBLIC -fprofile-arcs -ftest-coverage -lgcov)
+    LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/cmake")
+    include(CodeCoverage)
+    append_coverage_compiler_flags()
+    
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
+    setup_target_for_coverage_lcov(
+      NAME IFCA_coverage 
+      EXECUTABLE ${testExecutable} -j 8 
+      DEPENDENCIES ${testExecutable}
+      EXCLUDE  "/usr/*" "${PROJECT_SOURCE_DIR}/tests/*"
+      )
 endif()
